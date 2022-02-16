@@ -1,3 +1,5 @@
+use injesh::config;
+
 fn main() {
-    println!("Hello, world!");
+    injesh::config::parse();
 }
