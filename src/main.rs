@@ -1,5 +1,5 @@
-use injesh::config;
+use injesh::parser;
 
 fn main() {
-    injesh::config::parse();
+    println!("command: {:?}", parser::parse());
 }
