@@ -1,4 +1,4 @@
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg};
 use crate::command;
 
 const INIT:                 &str = "init";
@@ -44,112 +44,112 @@ If CMD is not specified, the default shell is used.";
         .author("higuruchi <hfumiya2324@gmail.com>")
         .about(about_this_app)
         .subcommand(
-            SubCommand::with_name(INIT)
+            App::new(INIT)
             .about(init_about)
         )
         .subcommand(
             // launchサブコマンド
-            SubCommand::with_name(LAUNCH)
+            App::new(LAUNCH)
             .about(launch_about)
             .arg(
-                Arg::with_name(CONTAINER_ID_OR_NAME)
+                Arg::new(CONTAINER_ID_OR_NAME)
                 .takes_value(true)
                 .required(true)
             )
             .arg(
-                Arg::with_name(OPT_ROOTFS)
+                Arg::new(OPT_ROOTFS)
                 .long(OPT_ROOTFS)
                 .takes_value(true)
             )
             .arg(
-                Arg::with_name(OPT_ROOTFS_IMAGE)
+                Arg::new(OPT_ROOTFS_IMAGE)
                 .long(OPT_ROOTFS_IMAGE)
                 .takes_value(true)
             )
             .arg(
-                Arg::with_name(OPT_ROOTFS_DOCKER)
+                Arg::new(OPT_ROOTFS_DOCKER)
                 .long(OPT_ROOTFS_DOCKER)
                 .takes_value(true)
             )
             .arg(
-                Arg::with_name(OPT_ROOTFS_LXD)
+                Arg::new(OPT_ROOTFS_LXD)
                 .long(OPT_ROOTFS_LXD)
                 .takes_value(true)
             )
             .arg(
-                Arg::with_name(NAME)
+                Arg::new(NAME)
                 .takes_value(true)
                 .required(true)
             )
             .arg(
-                Arg::with_name(CMD)
+                Arg::new(CMD)
                 .takes_value(true)
             )
 
         )
         .subcommand(
             // deleteサブコマンド
-            SubCommand::with_name(DELETE)
+            App::new(DELETE)
             .about(delete_about)
             .arg(
-                Arg::with_name(NAME)
+                Arg::new(NAME)
                 .takes_value(true)
                 .required(true)
             )
         )
         .subcommand(
             // listサブコマンド
-            SubCommand::with_name(LIST)
+            App::new(LIST)
             .about(list_about)
         )
         .subcommand(
             // file関連サブコマンド
-            SubCommand::with_name(FILE)
+            App::new(FILE)
             .subcommand(
                 // pullサブコマンド
-                SubCommand::with_name(PULL)
+                App::new(PULL)
                 .about(file_pull_about)
                 .arg(
-                    Arg::with_name(NAME)
+                    Arg::new(NAME)
                     .takes_value(true)
                 )
                 .arg(
-                    Arg::with_name("from")
+                    Arg::new("from")
                     .takes_value(true)
                 )
                 .arg(
-                    Arg::with_name("to")
+                    Arg::new("to")
                     .takes_value(true)
                 )
             )
             .subcommand(
                 // pushサブコマンド
-                SubCommand::with_name(PUSH)
+                App::new(PUSH)
                 .about(file_push_about)
                 .arg(
-                    Arg::with_name(NAME)
+                    Arg::new(NAME)
                     .takes_value(true)
                 )
                 .arg(
-                    Arg::with_name("from")
+                    Arg::new("from")
                     .takes_value(true)
                 )
                 .arg(
-                    Arg::with_name("to")
+                    Arg::new("to")
                     .takes_value(true)
                 )
             )
         )
         .subcommand(
-            SubCommand::with_name(EXEC)
+            App::new(EXEC)
             .about(exec_about)
             .arg(
-                Arg::with_name(NAME)
+                Arg::new(NAME)
                 .takes_value(true)
                 .required(true)
             )
             .arg(
-                Arg::with_name(CMD)
+                Arg::new(CMD)
                 .takes_value(true)
             )
         );
