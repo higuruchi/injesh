@@ -110,10 +110,6 @@ If CMD is not specified, the default shell is used.";
                 App::new(PULL)
                 .about(file_pull_about)
                 .arg(
-                    Arg::new(NAME)
-                    .takes_value(true)
-                )
-                .arg(
                     Arg::new("from")
                     .takes_value(true)
                 )
@@ -126,10 +122,6 @@ If CMD is not specified, the default shell is used.";
                 // pushサブコマンド
                 App::new(PUSH)
                 .about(file_push_about)
-                .arg(
-                    Arg::new(NAME)
-                    .takes_value(true)
-                )
                 .arg(
                     Arg::new("from")
                     .takes_value(true)
@@ -212,12 +204,11 @@ If CMD is not specified, the default shell is used.";
         Some((FILE, sub_m)) => {
             match sub_m.subcommand() {
                 Some((PULL, sub_m)) => {
-                    let name = match sub_m.value_of(NAME) {
-                        Some(name) => String::from(name),
-                        None => return Err(command::Error::CommandError)
-                    };
-                    let from = match sub_m.value_of("from") {
-                        Some(from) => String::from(from),
+                    let name_and_path = match sub_m.value_of("from") {
+                        Some(from) => match parse_container_path(from) {
+                            Ok(name_and_path) => name_and_path,
+                            Err(_) => return Err(command::Error::CommandError)
+                        },
                         None => return Err(command::Error::CommandError)
                     };
                     let to = match sub_m.value_of("to") {
@@ -225,15 +216,14 @@ If CMD is not specified, the default shell is used.";
                         None => return Err(command::Error::CommandError)
                     };
 
-                    Ok(command::SubCommand::File(command::FileSubCommand::Pull(command::File::new(name, from, to))))
+                    Ok(command::SubCommand::File(command::FileSubCommand::Pull(command::File::new(name_and_path.0, name_and_path.1, to))))
                 },
                 Some((PUSH, sub_m)) => {
-                    let name = match sub_m.value_of(NAME) {
-                        Some(name) => String::from(name),
-                        None => return Err(command::Error::CommandError)
-                    };
-                    let from = match sub_m.value_of("from") {
-                        Some(from) => String::from(from),
+                    let name_and_path = match sub_m.value_of("from") {
+                        Some(from) => match parse_container_path(from) {
+                            Ok(name_and_path) => name_and_path,
+                            Err(_) => return Err(command::Error::CommandError)
+                        },
                         None => return Err(command::Error::CommandError)
                     };
                     let to = match sub_m.value_of("to") {
@@ -241,7 +231,7 @@ If CMD is not specified, the default shell is used.";
                         None => return Err(command::Error::CommandError)
                     };
 
-                    Ok(command::SubCommand::File(command::FileSubCommand::Push(command::File::new(name, from, to))))
+                    Ok(command::SubCommand::File(command::FileSubCommand::Pull(command::File::new(name_and_path.0, name_and_path.1, to))))
                 },
                 _ => {
                     Err(command::Error::CommandError)
@@ -286,4 +276,14 @@ fn check_rootfs(
     }
 
     Ok(rootfs)
+}
+
+fn parse_container_path(container_path: &str) -> Result<(String, String), command::Error> {
+    let name_and_path: Vec<&str> = container_path.split(':').collect();
+
+    if name_and_path.len() != 2 {
+        return Err(command::Error::CommandError)
+    }
+
+    Ok((String::from(name_and_path[0]), String::from(name_and_path[1])))
 }
