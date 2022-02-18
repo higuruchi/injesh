@@ -1,3 +1,5 @@
+use injesh::parser;
+
 fn main() {
-    println!("Hello, world!");
+    println!("command: {:?}", parser::parse());
 }
