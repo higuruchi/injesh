@@ -1,5 +1,6 @@
 use clap::{App, Arg};
-use crate::command;
+use crate::command::{self, SubCommand, Exec, Launch, RootFSOption, FileSubCommand, File, Error};
+use std::path::PathBuf;
 
 const INIT:                 &str = "init";
 const LAUNCH:               &str = "launch";
@@ -150,12 +151,12 @@ If CMD is not specified, the default shell is used.";
 
     match matches.subcommand() {
         Some((INIT, _))     => {
-            Ok(command::SubCommand::Init)
+            Ok(SubCommand::Init)
         },
         Some((LAUNCH, sub_m))   => {
             let container = match sub_m.value_of(CONTAINER_ID_OR_NAME) {
                 Some(container) => container,
-                None => return Err(command::Error::CommandError)
+                None => return Err(Error::CommandError)
             };
             let opt_rootfs = sub_m.value_of(OPT_ROOTFS);
             let opt_rootfs_image = sub_m.value_of(OPT_ROOTFS_IMAGE);
@@ -163,7 +164,7 @@ If CMD is not specified, the default shell is used.";
             let opt_rootfs_lxd = sub_m.value_of(OPT_ROOTFS_LXD);
             let name = match sub_m.value_of(NAME) {
                 Some(name) => name,
-                None => return Err(command::Error::CommandError)
+                None => return Err(Error::CommandError)
             };
             let cmd = match sub_m.value_of(CMD) {
                 Some(cmd) => Some(String::from(cmd)),
@@ -171,7 +172,7 @@ If CMD is not specified, the default shell is used.";
             };
             let rootfs = check_rootfs(opt_rootfs, opt_rootfs_image, opt_rootfs_docker, opt_rootfs_lxd)?;
 
-            Ok(command::SubCommand::Launch(command::Launch::new(
+            Ok(SubCommand::Launch(Launch::new(
                 String::from(container),
                 rootfs,
                 String::from(name),
@@ -181,14 +182,14 @@ If CMD is not specified, the default shell is used.";
         Some((EXEC, sub_m)) => {
             let name = match sub_m.value_of(NAME) {
                 Some(name) => String::from(name),
-                None => return Err(command::Error::CommandError)
+                None => return Err(Error::CommandError)
             };
             let cmd = match sub_m.value_of(CMD) {
                 Some(cmd) => Some(String::from(cmd)),
                 None => None
             };
 
-            Ok(command::SubCommand::Exec(command::Exec::new(name, cmd)))
+            Ok(SubCommand::Exec(Exec::new(name, cmd)))
         },
         Some((DELETE, sub_m)) => {
             let container = match sub_m.value_of(NAME) {
@@ -196,10 +197,10 @@ If CMD is not specified, the default shell is used.";
                 None => return Err(command::Error::CommandError)
             };
 
-            Ok(command::SubCommand::Delete(container))
+            Ok(SubCommand::Delete(container))
         },
         Some((LIST, _)) => {
-            Ok(command::SubCommand::List)
+            Ok(SubCommand::List)
         },
         Some((FILE, sub_m)) => {
             match sub_m.subcommand() {
@@ -207,39 +208,51 @@ If CMD is not specified, the default shell is used.";
                     let name_and_path = match sub_m.value_of("from") {
                         Some(from) => match parse_container_path(from) {
                             Ok(name_and_path) => name_and_path,
-                            Err(_) => return Err(command::Error::CommandError)
+                            Err(_) => return Err(Error::CommandError)
                         },
-                        None => return Err(command::Error::CommandError)
+                        None => return Err(Error::CommandError)
                     };
                     let to = match sub_m.value_of("to") {
                         Some(to) => String::from(to),
-                        None => return Err(command::Error::CommandError)
+                        None => return Err(Error::CommandError)
                     };
 
-                    Ok(command::SubCommand::File(command::FileSubCommand::Pull(command::File::new(name_and_path.0, name_and_path.1, to))))
+                    Ok(
+                        SubCommand::File(
+                            FileSubCommand::Pull(
+                                File::new(String::from(name_and_path.0), PathBuf::from(name_and_path.1), PathBuf::from(to))
+                            )
+                        )
+                    )
                 },
                 Some((PUSH, sub_m)) => {
                     let name_and_path = match sub_m.value_of("from") {
                         Some(from) => match parse_container_path(from) {
                             Ok(name_and_path) => name_and_path,
-                            Err(_) => return Err(command::Error::CommandError)
+                            Err(_) => return Err(Error::CommandError)
                         },
-                        None => return Err(command::Error::CommandError)
+                        None => return Err(Error::CommandError)
                     };
                     let to = match sub_m.value_of("to") {
                         Some(to) => String::from(to),
-                        None => return Err(command::Error::CommandError)
+                        None => return Err(Error::CommandError)
                     };
 
-                    Ok(command::SubCommand::File(command::FileSubCommand::Pull(command::File::new(name_and_path.0, name_and_path.1, to))))
+                    Ok(
+                        SubCommand::File(
+                            FileSubCommand::Pull(
+                                File::new(String::from(name_and_path.0), PathBuf::from(name_and_path.1), PathBuf::from(to))
+                            )
+                        )
+                    )
                 },
                 _ => {
-                    Err(command::Error::CommandError)
+                    Err(Error::CommandError)
                 }
             }
         },
         _ => {
-            Err(command::Error::CommandError)
+            Err(Error::CommandError)
         }
     }
 
@@ -250,40 +263,40 @@ fn check_rootfs(
     opt_rootfs_image:   Option<&str>,
     opt_rootfs_docker:  Option<&str>,
     opt_rootfs_lxd:     Option<&str>
-) -> Result<command::RootFSOption, command::Error> {
+) -> Result<RootFSOption, command::Error> {
     let mut num_of_some = 0;
     let mut rootfs = command::RootFSOption::None;
 
     if opt_rootfs.is_some() {
         num_of_some += 1;
-        rootfs = command::RootFSOption::Rootfs(String::from(opt_rootfs.unwrap_or("")));
+        rootfs = RootFSOption::Rootfs(String::from(opt_rootfs.unwrap_or("")));
     }
     if opt_rootfs_image.is_some() {
         num_of_some += 1;
-        rootfs = command::RootFSOption::RootfsImage(String::from(opt_rootfs_image.unwrap_or("")));
+        rootfs = RootFSOption::RootfsImage(String::from(opt_rootfs_image.unwrap_or("")));
     }
     if opt_rootfs_docker.is_some() {
         num_of_some += 1;
-        rootfs = command::RootFSOption::RootfsDocker(String::from(opt_rootfs_docker.unwrap_or("")));
+        rootfs = RootFSOption::RootfsDocker(String::from(opt_rootfs_docker.unwrap_or("")));
     }
     if opt_rootfs_lxd.is_some() {
         num_of_some += 1;
-        rootfs = command::RootFSOption::RootfsLxd(String::from(opt_rootfs_lxd.unwrap_or("")));
+        rootfs = RootFSOption::RootfsLxd(String::from(opt_rootfs_lxd.unwrap_or("")));
     }
 
     if num_of_some > 1 {
-        return Err(command::Error::CommandError)
+        return Err(Error::CommandError)
     }
 
     Ok(rootfs)
 }
 
-fn parse_container_path(container_path: &str) -> Result<(String, String), command::Error> {
+fn parse_container_path(container_path: &str) -> Result<(&str, &str), Error> {
     let name_and_path: Vec<&str> = container_path.split(':').collect();
 
     if name_and_path.len() != 2 {
-        return Err(command::Error::CommandError)
+        return Err(Error::CommandError)
     }
 
-    Ok((String::from(name_and_path[0]), String::from(name_and_path[1])))
+    Ok((name_and_path[0], name_and_path[1]))
 }

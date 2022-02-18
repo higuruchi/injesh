@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 // TODO::それぞれの方に応じたエラーを定義する
 #[derive(Debug)]
 pub enum Error {
@@ -46,8 +48,8 @@ pub enum FileSubCommand {
 #[derive(Debug)]
 pub struct File {
     name: String,
-    from: String,
-    to:   String
+    from: PathBuf,
+    to:   PathBuf
 }
 
 impl Launch {
@@ -79,7 +81,7 @@ impl Exec {
 }
 
 impl File {
-    pub fn new(name: String, from: String, to: String) -> File {
+    pub fn new(name: String, from: PathBuf, to: PathBuf) -> File {
         File{
             name: name,
             from: from,
