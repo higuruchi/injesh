@@ -269,7 +269,7 @@ fn check_rootfs(
 
     if opt_rootfs.is_some() {
         num_of_some += 1;
-        rootfs = RootFSOption::Rootfs(String::from(opt_rootfs.unwrap_or("")));
+        rootfs = RootFSOption::Rootfs(PathBuf::from(opt_rootfs.unwrap_or("/")));
     }
     if opt_rootfs_image.is_some() {
         num_of_some += 1;

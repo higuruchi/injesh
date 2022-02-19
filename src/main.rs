@@ -1,5 +1,12 @@
 use injesh::parser;
+use injesh::init;
+use injesh::handler::{self, Handler};
 
 fn main() {
-    println!("command: {:?}", parser::parse());
+    let command = parser::parse().unwrap();
+    let init = init::InitStruct::new();
+    let handler = handler::HandlerStruct::new(command, init);
+
+
+    handler.run();
 }

@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::fmt;
 
 // TODO::それぞれの方に応じたエラーを定義する
 #[derive(Debug)]
@@ -32,7 +33,7 @@ pub struct Launch {
 
 #[derive(Debug)]
 pub enum RootFSOption {
-    Rootfs(String),
+    Rootfs(PathBuf),
     RootfsImage(String),
     RootfsDocker(String),
     RootfsLxd(String),
