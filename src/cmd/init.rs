@@ -1,4 +1,4 @@
-use crate::init_inteface::Init;
+use crate::init::Init;
 use std::{fs, env};
 
 pub struct InitStruct {}

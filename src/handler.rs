@@ -1,47 +1,71 @@
-use crate::command::{self, SubCommand, Exec, Launch, RootFSOption, FileSubCommand, File, Error};
-use crate::init_inteface::Init;
-use crate::list_interface::List;
+use crate::command::SubCommand;
+use crate::init::Init;
+use crate::list::List;
+use crate::launch::Launch;
+use crate::delete::Delete;
+use crate::exec::Exec;
 
-pub struct HandlerStruct<I, L>
+pub struct HandlerStruct<I, L, LA, E, D>
     where I: Init,
-        L: List
+        L: List,
+        LA: Launch,
+        E: Exec,
+        D: Delete
 {
     command: SubCommand,
     init: I,
-    list: L
+    list: L,
+    launch: LA,
+    exec: E,
+    delete: D
 }
 
 pub trait Handler {
     fn run(&self);
 }
 
-impl<I, L> Handler for HandlerStruct<I, L>
+impl<I, L, LA, E, D> Handler for HandlerStruct<I, L, LA, E, D>
     where I: Init,
-        L: List
+        L: List,
+        LA: Launch,
+        E: Exec,
+        D: Delete
 {
     fn run(&self) {
         println!("hello my name is handler and i have {:?}", self.command);
 
-        match self.command {
+        match &self.command {
             SubCommand::Init => self.init.init(),
             SubCommand::List => self.list.list(),
-            SubCommand::Delete(_) => println!("TODO: delete"),
-            SubCommand::Exec(_) => println!("TODO: exec"),
+            SubCommand::Delete(d) => self.delete.delete(d),
+            SubCommand::Exec(e) => self.exec.exec(e),
             SubCommand::File(_) => println!("TODO: file"),
-            SubCommand::Launch(_) => println!("TODO: launch")
+            SubCommand::Launch(l) => self.launch.launch(l)
         }
     }
 }
 
-impl<I, L> HandlerStruct<I, L>
+impl<I, L, LA, E, D> HandlerStruct<I, L, LA, E, D>
     where I: Init,
-        L: List
+        L: List,
+        LA: Launch,
+        E: Exec,
+        D: Delete
 {
-    pub fn new(command: SubCommand, init: I, list: L) -> impl Handler {
+    pub fn new(command: SubCommand,
+                init: I,
+                list: L,
+                launch: LA,
+                exec: E,
+                delete: D
+    ) -> impl Handler {
         HandlerStruct {
             command: command,
             init: init,
-            list: list
+            list: list,
+            launch: launch,
+            exec: exec,
+            delete: delete
         }
     }
 }

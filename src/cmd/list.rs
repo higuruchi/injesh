@@ -1,9 +1,11 @@
-use crate::list_interface::List;
+use crate::list::List;
 
 pub struct ListStruct;
 
 impl List for ListStruct {
-    fn list(&self) {}
+    fn list(&self) {
+        println!("execute list!");
+    }
 }
 
 impl ListStruct {
