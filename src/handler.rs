@@ -35,7 +35,13 @@ impl<I, L, LA, E, D> Handler for HandlerStruct<I, L, LA, E, D>
         println!("hello my name is handler and i have {:?}", self.command);
 
         match &self.command {
-            SubCommand::Init => self.init.init(),
+            // TODO: エラーハンドリング
+            SubCommand::Init => {
+                match self.init.init() {
+                    Ok(_) => println!("Initialized!"),
+                    Err(e) => println!("Initialize Error {:?}", e)
+                }
+            },
             SubCommand::List => self.list.list(),
             SubCommand::Delete(d) => self.delete.delete(d),
             SubCommand::Exec(e) => self.exec.exec(e),
