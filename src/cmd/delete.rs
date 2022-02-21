@@ -4,7 +4,7 @@ use crate::command;
 pub struct DeleteStruct;
 
 impl Delete for DeleteStruct {
-    fn delete(&self, delete: &str) {
+    fn delete(&self, delete: &command::Delete) {
         println!("execute delete!")
     }
 }

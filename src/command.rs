@@ -13,7 +13,7 @@ pub enum SubCommand {
     Init,
     Launch(Launch),
     List,
-    Delete(String),
+    Delete(Delete),
     File(FileSubCommand),
 }
 
@@ -29,6 +29,11 @@ pub struct Launch {
     rootfs_option: RootFSOption,
     name: String,
     cmd: Option<String>
+}
+
+#[derive(Debug)]
+pub struct Delete {
+    name: String,
 }
 
 #[derive(Debug)]
@@ -77,6 +82,16 @@ impl Exec {
         Exec {
             name: name,
             cmd: cmd
+        }
+    }
+}
+
+impl Delete {
+    pub fn new(
+        name: String,
+    ) -> Delete {
+        Delete {
+            name: name,
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::command;
 
 pub trait Delete {
-    fn delete(&self, delete: &str);
+    fn delete(&self, delete: &command::Delete);
 }

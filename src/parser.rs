@@ -1,5 +1,5 @@
 use clap::{App, Arg};
-use crate::command::{self, SubCommand, Exec, Launch, RootFSOption, FileSubCommand, File, Error};
+use crate::command::{self, SubCommand, Exec, Launch, Delete, RootFSOption, FileSubCommand, File, Error};
 use std::path::PathBuf;
 
 const INIT:                 &str = "init";
@@ -197,7 +197,8 @@ If CMD is not specified, the default shell is used.";
                 None => return Err(command::Error::CommandError)
             };
 
-            Ok(SubCommand::Delete(container))
+            // Ok(SubCommand::Delete(container))
+            Ok(SubCommand::Delete(Delete::new(container)))
         },
         Some((LIST, _)) => {
             Ok(SubCommand::List)
