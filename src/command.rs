@@ -10,7 +10,7 @@ pub enum Error {
 pub mod init_error {
     #[derive(Debug)]
     pub enum Error {
-        HOMENotFound,
+        HomeNotFound,
         AlreadyInitialized
     }
 }

@@ -10,7 +10,7 @@ impl Init for InitStruct {
 
         let home_injesh = match env::var("HOME") {
             Ok(val) => format!("{}/.injesh", val),
-            Err(_) => return Err(Error::HOMENotFound)
+            Err(_) => return Err(Error::HomeNotFound)
         };
 
         match fs::create_dir(format!("{}", home_injesh)) {
