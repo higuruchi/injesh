@@ -5,8 +5,14 @@ use std::fmt;
 #[derive(Debug)]
 pub enum Error {
     CommandError,
-    HOMENouFound,
-    AlreadyInitialized
+}
+
+pub mod init_error {
+    #[derive(Debug)]
+    pub enum Error {
+        HOMENotFound,
+        AlreadyInitialized
+    }
 }
 
 #[derive(Debug)]
