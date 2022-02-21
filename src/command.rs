@@ -4,7 +4,15 @@ use std::fmt;
 // TODO::それぞれの方に応じたエラーを定義する
 #[derive(Debug)]
 pub enum Error {
-    CommandError
+    CommandError,
+}
+
+pub mod init_error {
+    #[derive(Debug)]
+    pub enum Error {
+        HomeNotFound,
+        AlreadyInitialized
+    }
 }
 
 #[derive(Debug)]
