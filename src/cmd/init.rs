@@ -1,17 +1,15 @@
 use crate::init::Init;
 use crate::command::init_error::Error;
-use std::{fs, env};
+use crate::command;
+use std::fs;
 
 pub struct InitStruct {}
 
 impl Init for InitStruct {
-    fn init(&self) -> Result<(), Error> {
+    fn init(&self, init: &command::Init) -> Result<(), Box<dyn std::error::Error>> {
         let mut  err_flg = 0;
 
-        let home_injesh = match env::var("HOME") {
-            Ok(val) => format!("{}/.injesh", val),
-            Err(_) => return Err(Error::HomeNotFound)
-        };
+        let home_injesh = format!("{}/.injesh", init.user().home());
 
         match fs::create_dir(format!("{}", home_injesh)) {
             Ok(_) => {},
@@ -27,7 +25,7 @@ impl Init for InitStruct {
         }
 
         if err_flg == 3 {
-            return Err(Error::AlreadyInitialized);
+            Err(Error::AlreadyInitialized)?
         }
 
         Ok(())
