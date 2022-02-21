@@ -35,7 +35,13 @@ impl List for ListStruct {
 }
 
 impl ListStruct {
-    pub fn new() -> impl List {
+    pub fn new() -> Self {
         ListStruct
+    }
+}
+
+impl Default for ListStruct {
+    fn default() -> Self {
+        Self::new()
     }
 }
