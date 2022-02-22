@@ -160,7 +160,7 @@ If CMD is not specified, the default shell is used.";
 
             let container = match sub_m.value_of(CONTAINER_ID_OR_NAME) {
                 Some(container) => container,
-                None => return Err(Error::ContainerIDOrNameNotFound)?
+                None => return Err(Error::ContainerIdOrNameNotFound)?
             };
             let opt_rootfs = sub_m.value_of(OPT_ROOTFS);
             let opt_rootfs_image = sub_m.value_of(OPT_ROOTFS_IMAGE);

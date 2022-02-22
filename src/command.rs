@@ -99,14 +99,14 @@ pub mod launch_error {
 
     #[derive(Debug)]
     pub enum Error {
-        ContainerIDOrNameNotFound,
+        ContainerIdOrNameNotFound,
         NameNotFound
     }
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
-                Error::ContainerIDOrNameNotFound => write!(f, "Container id or name not found"),
+                Error::ContainerIdOrNameNotFound => write!(f, "Container id or name not found"),
                 Error::NameNotFound => write!(f, "Name not found")
             }
         }
