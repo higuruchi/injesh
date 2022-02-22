@@ -32,15 +32,32 @@ impl<I, L, LA, E, D> Handler for HandlerStruct<I, L, LA, E, D>
         D: Delete
 {
     fn run(&self) {
-        println!("hello my name is handler and i have {:?}", self.command);
 
         match &self.command {
-            SubCommand::Init => self.init.init(),
-            SubCommand::List => self.list.list(),
-            SubCommand::Delete(d) => self.delete.delete(d),
-            SubCommand::Exec(e) => self.exec.exec(e),
-            SubCommand::File(_) => println!("TODO: file"),
-            SubCommand::Launch(l) => self.launch.launch(l)
+            // TODO: エラーハンドリング
+            SubCommand::Init(init_args) => {
+                match self.init.init(init_args) {
+                    Ok(_) => println!("Initialized!"),
+                    Err(e) => println!("Initialize Error {:?}", e)
+                }
+            },
+            SubCommand::List => match self.list.list() {
+                Ok(_) => {},
+                Err(e) => println!("execute list command error: {:?}", e)
+            },
+            SubCommand::Delete(delete_args) => match self.delete.delete(delete_args) {
+                Ok(_) => {},
+                Err(e) => println!("execute delete command error: {:?}", e)
+            },
+            SubCommand::Exec(exec_args) => match self.exec.exec(exec_args) {
+                Ok(_) => {},
+                Err(e) => println!("execute exec command error: {:?}", e)
+            },
+            SubCommand::File(_) => println!("TODO: file sub command"),
+            SubCommand::Launch(launch_args) => match self.launch.launch(launch_args) {
+                Ok(_) => {},
+                Err(e) => println!("execute launch command error: {:?}", e)
+            }
         }
     }
 }

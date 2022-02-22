@@ -1,5 +1,5 @@
 use clap::{App, Arg};
-use crate::command::{self, SubCommand, Exec, Launch, RootFSOption, FileSubCommand, File, Error};
+use crate::command::{self, SubCommand, Init, Exec, Launch, Delete, RootFSOption, FileSubCommand, File, Error};
 use std::path::PathBuf;
 
 const INIT:                 &str = "init";
@@ -18,7 +18,7 @@ const OPT_ROOTFS_DOCKER:    &str = "--rootfs-docker";
 const OPT_ROOTFS_LXD:       &str = "--rootfs-lxd";
 const CONTAINER_ID_OR_NAME: &str = "Container ID or name";
 
-pub fn parse() -> Result<command::SubCommand, command::Error> {
+pub fn parse() -> Result<SubCommand, Box<dyn std::error::Error>> {
     let about_this_app = "Applications for debugging into containers without shells such as distroless and scratch. 
 It is possible to enter a container by sharing namespaces \
 such as cgroup, ipc, net, pid, user, uts, etc. with the container to be debugged. 
@@ -151,12 +151,16 @@ If CMD is not specified, the default shell is used.";
 
     match matches.subcommand() {
         Some((INIT, _))     => {
-            Ok(SubCommand::Init)
+            let init = Init::new()?;
+
+            Ok(SubCommand::Init(init))
         },
         Some((LAUNCH, sub_m))   => {
+            use command::launch_error::Error;
+
             let container = match sub_m.value_of(CONTAINER_ID_OR_NAME) {
                 Some(container) => container,
-                None => return Err(Error::CommandError)
+                None => return Err(Error::ContainerIdOrNameNotFound)?
             };
             let opt_rootfs = sub_m.value_of(OPT_ROOTFS);
             let opt_rootfs_image = sub_m.value_of(OPT_ROOTFS_IMAGE);
@@ -164,7 +168,7 @@ If CMD is not specified, the default shell is used.";
             let opt_rootfs_lxd = sub_m.value_of(OPT_ROOTFS_LXD);
             let name = match sub_m.value_of(NAME) {
                 Some(name) => name,
-                None => return Err(Error::CommandError)
+                None => return Err(Error::NameNotFound)?
             };
             let cmd = match sub_m.value_of(CMD) {
                 Some(cmd) => Some(String::from(cmd)),
@@ -180,9 +184,11 @@ If CMD is not specified, the default shell is used.";
             )))
         },
         Some((EXEC, sub_m)) => {
+            use command::exec_error::Error;
+
             let name = match sub_m.value_of(NAME) {
                 Some(name) => String::from(name),
-                None => return Err(Error::CommandError)
+                None => return Err(Error::NameNotFound)?
             };
             let cmd = match sub_m.value_of(CMD) {
                 Some(cmd) => Some(String::from(cmd)),
@@ -192,29 +198,33 @@ If CMD is not specified, the default shell is used.";
             Ok(SubCommand::Exec(Exec::new(name, cmd)))
         },
         Some((DELETE, sub_m)) => {
+            use command::delete_error::Error;
+
             let container = match sub_m.value_of(NAME) {
                 Some(container) => String::from(container),
-                None => return Err(command::Error::CommandError)
+                None => return Err(Error::NameNotFound)?
             };
 
-            Ok(SubCommand::Delete(container))
+            Ok(SubCommand::Delete(Delete::new(container)))
         },
         Some((LIST, _)) => {
             Ok(SubCommand::List)
         },
         Some((FILE, sub_m)) => {
+            use command::file_error::Error;
+
             match sub_m.subcommand() {
                 Some((PULL, sub_m)) => {
                     let name_and_path = match sub_m.value_of("from") {
                         Some(from) => match parse_container_path(from) {
                             Ok(name_and_path) => name_and_path,
-                            Err(_) => return Err(Error::CommandError)
+                            Err(_) => return Err(Error::FromParseError)?
                         },
-                        None => return Err(Error::CommandError)
+                        None => return Err(Error::FromNotFound)?
                     };
                     let to = match sub_m.value_of("to") {
                         Some(to) => String::from(to),
-                        None => return Err(Error::CommandError)
+                        None => return Err(Error::ToNotFound)?
                     };
 
                     Ok(
@@ -229,13 +239,13 @@ If CMD is not specified, the default shell is used.";
                     let name_and_path = match sub_m.value_of("from") {
                         Some(from) => match parse_container_path(from) {
                             Ok(name_and_path) => name_and_path,
-                            Err(_) => return Err(Error::CommandError)
+                            Err(_) => return Err(Error::FromParseError)?
                         },
-                        None => return Err(Error::CommandError)
+                        None => return Err(Error::FromNotFound)?
                     };
                     let to = match sub_m.value_of("to") {
                         Some(to) => String::from(to),
-                        None => return Err(Error::CommandError)
+                        None => return Err(Error::ToNotFound)?
                     };
 
                     Ok(
@@ -247,12 +257,12 @@ If CMD is not specified, the default shell is used.";
                     )
                 },
                 _ => {
-                    Err(Error::CommandError)
+                    Err(Error::FileOperationNotFound)?
                 }
             }
         },
         _ => {
-            Err(Error::CommandError)
+            Err(Error::CommandError)?
         }
     }
 
@@ -291,11 +301,11 @@ fn check_rootfs(
     Ok(rootfs)
 }
 
-fn parse_container_path(container_path: &str) -> Result<(&str, &str), Error> {
+fn parse_container_path(container_path: &str) -> Result<(&str, &str), ()> {
     let name_and_path: Vec<&str> = container_path.split(':').collect();
 
     if name_and_path.len() != 2 {
-        return Err(Error::CommandError)
+        return Err(())
     }
 
     Ok((name_and_path[0], name_and_path[1]))

@@ -1,28 +1,34 @@
 use crate::init::Init;
-use std::{fs, env};
+use crate::command::init_error::Error;
+use crate::command;
+use std::fs;
 
 pub struct InitStruct {}
 
 impl Init for InitStruct {
-    fn init(&self) {
-        let home = match env::var("HOME") {
-            Ok(val) => val,
-            Err(_) => String::new()
-        };
+    fn init(&self, init: &command::Init) -> Result<(), Box<dyn std::error::Error>> {
+        let mut  err_flg = 0;
 
-        match fs::create_dir(format!("{}/.injesh", home)) {
+        let home_injesh = format!("{}/.injesh", init.user().home());
+
+        match fs::create_dir(format!("{}", home_injesh)) {
             Ok(_) => {},
-            Err(why) => println!("{}", why)
+            Err(_) => err_flg += 1
         }
-        match fs::create_dir(format!("{}/.injesh/images", home)) {
+        match fs::create_dir(format!("{}/images", home_injesh)) {
             Ok(_) => {},
-            Err(why) => println!("{}", why)
+            Err(_) => err_flg += 1
         }
-        match fs::create_dir(format!("{}/.injesh/containers", home)) {
+        match fs::create_dir(format!("{}/containers", home_injesh)) {
             Ok(_) => {},
-            Err(why) => println!("{}", why)
+            Err(_) => err_flg += 1
         }
-        println!("Initialized");
+
+        if err_flg == 3 {
+            Err(Error::AlreadyInitialized)?
+        }
+
+        Ok(())
     }
 }
 
