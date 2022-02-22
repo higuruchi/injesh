@@ -1,6 +1,6 @@
-use injesh::parser;
-use injesh::cmd::{init, list, launch, delete, exec};
+use injesh::cmd::{delete, exec, init, launch, list};
 use injesh::handler::{self, Handler};
+use injesh::parser;
 
 fn main() {
     let command = parser::parse().unwrap();
@@ -10,7 +10,6 @@ fn main() {
     let delete = delete::DeleteStruct::new();
     let exec = exec::ExecStruct::new();
     let handler = handler::HandlerStruct::new(command, init, list, launch, exec, delete);
-
 
     handler.run();
 }

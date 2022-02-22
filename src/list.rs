@@ -1,3 +1,5 @@
+use crate::command;
+
 pub trait List {
-    fn list(&self)  -> Result<(), Box<dyn std::error::Error>>;
+    fn list(&self, list: &command::List) -> Result<(), Box<dyn std::error::Error>>;
 }

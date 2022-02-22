@@ -1,11 +1,11 @@
-pub mod parser;
+pub mod cmd;
 mod command;
 pub mod handler;
-pub mod cmd;
+pub mod parser;
 mod user;
 
-mod init;
-mod list;
-mod launch;
-mod exec;
 mod delete;
+mod exec;
+mod init;
+mod launch;
+mod list;
