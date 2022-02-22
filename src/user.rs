@@ -2,7 +2,9 @@ use std::{env, fmt, error};
 
 #[derive(Debug)]
 pub struct User {
-    home: String
+    injesh_home: String,
+    images: String,
+    containers: String,
 }
 
 #[derive(Debug)]
@@ -22,17 +24,44 @@ impl error::Error for Error {}
 
 impl User {
     pub fn new() -> Result<User, Box<dyn std::error::Error>> {
-        let home = match env::var("HOME") {
-            Ok(home) => home,
+        let injesh_homedir = match env::var("HOME") {
+            Ok(home) => home + "/.injesh",
             Err(_) => return Err(Error::HomeNotFound)?
         };
 
         Ok(User{
-            home: home
+            injesh_home: format!("{}", &injesh_homedir),
+            images: format!("{}/images", &injesh_homedir),
+            containers: format!("{}/containers", &injesh_homedir)
         })
     }
 
-    pub fn home(&self) -> &str {
-        &self.home
+    pub fn injesh_home(&self) -> &str {
+        &self.injesh_home
+    }
+    pub fn images(&self) -> &str {
+        &self.images
+    }
+    pub fn containers(&self) -> &str {
+        &self.containers
+    }
+}
+
+mod tests {
+    use super::*;
+    #[test]
+    fn test_user_home() {
+        let userinfo = User::new();
+        assert_eq!(userinfo.unwrap().injesh_home(), "/home/runner/.injesh");
+    }
+    #[test]
+    fn test_user_images() {
+        let userinfo = User::new();
+        assert_eq!(userinfo.unwrap().images(), "/home/runner/.injesh/images");
+    }
+    #[test]
+    fn test_user_containers() {
+        let userinfo = User::new();
+        assert_eq!(userinfo.unwrap().containers(), "/home/runner/.injesh/containers");
     }
 }
