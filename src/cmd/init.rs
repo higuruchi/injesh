@@ -9,17 +9,17 @@ impl Init for InitStruct {
     fn init(&self, init: &command::Init) -> Result<(), Box<dyn std::error::Error>> {
         let mut  err_flg = 0;
 
-        let home_injesh = format!("{}/.injesh", init.user().home());
+        let user_dirs = init.user();
 
-        match fs::create_dir(format!("{}", home_injesh)) {
+        match fs::create_dir(user_dirs.injesh_home()) {
             Ok(_) => {},
             Err(_) => err_flg += 1
         }
-        match fs::create_dir(format!("{}/images", home_injesh)) {
+        match fs::create_dir(user_dirs.images()) {
             Ok(_) => {},
             Err(_) => err_flg += 1
         }
-        match fs::create_dir(format!("{}/containers", home_injesh)) {
+        match fs::create_dir(user_dirs.containers()) {
             Ok(_) => {},
             Err(_) => err_flg += 1
         }
