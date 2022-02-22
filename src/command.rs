@@ -6,6 +6,7 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub enum Error {
     CommandError,
+    NotInitialized,
 }
 
 impl fmt::Display for Error {

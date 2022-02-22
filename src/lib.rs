@@ -3,6 +3,7 @@ mod command;
 pub mod handler;
 pub mod parser;
 mod user;
+mod utils;
 
 mod delete;
 mod exec;
