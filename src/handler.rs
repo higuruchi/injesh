@@ -35,8 +35,8 @@ impl<I, L, LA, E, D> Handler for HandlerStruct<I, L, LA, E, D>
 
         match &self.command {
             // TODO: エラーハンドリング
-            SubCommand::Init(init) => {
-                match self.init.init(init) {
+            SubCommand::Init(init_args) => {
+                match self.init.init(init_args) {
                     Ok(_) => println!("Initialized!"),
                     Err(e) => println!("Initialize Error {:?}", e)
                 }
@@ -45,16 +45,16 @@ impl<I, L, LA, E, D> Handler for HandlerStruct<I, L, LA, E, D>
                 Ok(_) => {},
                 Err(e) => println!("execute list command error: {:?}", e)
             },
-            SubCommand::Delete(d) => match self.delete.delete(d) {
+            SubCommand::Delete(delete_args) => match self.delete.delete(delete_args) {
                 Ok(_) => {},
                 Err(e) => println!("execute delete command error: {:?}", e)
             },
-            SubCommand::Exec(e) => match self.exec.exec(e) {
+            SubCommand::Exec(exec_args) => match self.exec.exec(exec_args) {
                 Ok(_) => {},
                 Err(e) => println!("execute exec command error: {:?}", e)
             },
             SubCommand::File(_) => println!("TODO: file sub command"),
-            SubCommand::Launch(l) => match self.launch.launch(l) {
+            SubCommand::Launch(launch_args) => match self.launch.launch(launch_args) {
                 Ok(_) => {},
                 Err(e) => println!("execute launch command error: {:?}", e)
             }
