@@ -6,6 +6,8 @@ pub struct ListStruct;
 
 impl List for ListStruct {
     fn list(&self, list: &command::List) -> Result<(), Box<dyn std::error::Error>> {
+        crate::utils::check_initialized()?;
+
         let user_info = list.get_user();
         let container_names = extract_container_names(user_info)?;
 
