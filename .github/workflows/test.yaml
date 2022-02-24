@@ -35,7 +35,7 @@ jobs:
       - name: Build scratch web server docker image
         if: steps.cache-scratchweb-test2.outputs.cache-hit != 'true'
         run: |
-          docker image build -f scratch_web/Dockerfile -t scratch_web scratch_web/
+          docker image build -f ci-docker/scratch_web/Dockerfile -t scratch_web ci-docker/scratch_web/
           docker save --output ${{ env.CACHE_PATH_SCRATCH_WEB }} scratch_web:${{ env.SCRATCH_WEB_IMAGE_VERSION }}
 
       # cache nginx docker image test
