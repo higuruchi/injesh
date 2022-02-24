@@ -1,9 +1,9 @@
-use std::{path, error, fmt};
-use std::os::unix::net::UnixStream;
-use std::io::prelude::*;
 use form_urlencoded;
 use serde::Deserialize;
+use std::io::prelude::*;
+use std::os::unix::net::UnixStream;
 use std::process::Command;
+use std::{error, fmt, path};
 // debug
 // use std::collections::HashMap;
 // use std::ffi::OsStr;
@@ -32,7 +32,7 @@ struct DockerContainerInspect {
 #[allow(non_snake_case)]
 struct DockerGraphDriver {
     Name: String,
-    Data: DockerGraphDriverData
+    Data: DockerGraphDriverData,
 }
 #[derive(Debug, Deserialize)]
 #[allow(non_snake_case)]
@@ -74,7 +74,9 @@ impl fmt::Display for Error {
             Error::ContainerNotFound => write!(f, "Container Not Found"),
             Error::GraphDriverNotOverlay2 => write!(f, "GraphDriver is not overlay2"),
             Error::GraphDriverPathNotFound => write!(f, "GraphDriver path not found"),
-            Error::ApiResponseError(message) => write!(f, "API response error with message: {}", message),
+            Error::ApiResponseError(message) => {
+                write!(f, "API response error with message: {}", message)
+            }
         }
     }
 }
@@ -98,13 +100,16 @@ impl Container {
         };
 
         // println!("------------");
-        let docker_info: DockerInspectApiResponse = serde_json::from_value(request_docker_api("GET", &format!("/containers/{id}/json", id = id), None)?)?;
+        let docker_info: DockerInspectApiResponse = serde_json::from_value(request_docker_api(
+            "GET",
+            &format!("/containers/{id}/json", id = id),
+            None,
+        )?)?;
         // println!("\n\ndockerinfo: ```{:?}```", docker_info);
         if docker_info.containers.GraphDriver.Name != "overlay2" {
             Err(Error::GraphDriverNotOverlay2)?
         }
         let graph_driver_data = docker_info.containers.GraphDriver.Data;
-
 
         Ok(Container {
             pid,
@@ -120,22 +125,25 @@ impl Container {
     pub fn convert_name_to_id(name: &str) -> Result<String, Box<dyn std::error::Error>> {
         // as commandline:
         // curl --unix-socket /var/run/docker.sock -X GET "http://localhost/containers/json?all=true&filters=$( python3 -c 'import urllib.parse; print( urllib.parse.quote("""{"name": ["beautiful_curran"]}""") )' )"
-        let docker_info: DockerListApiResponse = serde_json::from_value(request_docker_api("GET", "/containers/json", Some(&format!(r#"all=true&filters={{"name": ["{}"]}}"#, name)))?)?;
-    
+        let docker_info: DockerListApiResponse = serde_json::from_value(request_docker_api(
+            "GET",
+            "/containers/json",
+            Some(&format!(r#"all=true&filters={{"name": ["{}"]}}"#, name)),
+        )?)?;
+
         if docker_info.containers.is_empty() {
             Err(Error::ContainerNotFound)?
         }
         if docker_info.containers.len() > 1 {
             Err(Error::ContainerNotFound)?
         }
-    
+
         let mut id = docker_info.containers[0].Id.to_string();
         id.truncate(12);
-    
+
         Ok(id)
     }
 }
-
 
 fn get_pid_from_container_id(target_container_id: &str) -> Result<u32, Box<dyn std::error::Error>> {
     // TODO: Eliminate dependency on shell command.
@@ -154,7 +162,8 @@ fn get_pid_from_container_id(target_container_id: &str) -> Result<u32, Box<dyn s
 fn valid_pid_is_container(pid: u32) -> Result<(), Box<dyn std::error::Error>> {
     // TODO: Eliminate dependency on shell command.
     let mut cmd = Command::new("sh");
-    cmd.arg("-c").arg(format!("ps -p $(ps -p {pid} -o ppid=) -o args=", pid = pid));
+    cmd.arg("-c")
+        .arg(format!("ps -p $(ps -p {pid} -o ppid=) -o args=", pid = pid));
     let out = cmd.output()?;
     // check if `out` contains `moby`
     let stdout = String::from_utf8(out.stdout)?;
@@ -178,7 +187,11 @@ fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::
         encoded_params.append_pair(k_v.0, k_v.1);
     });
     let encoded_params = encoded_params.finish();
-    let request_path = format!("{path}?{encoded_params}", path = path, encoded_params = encoded_params);
+    let request_path = format!(
+        "{path}?{encoded_params}",
+        path = path,
+        encoded_params = encoded_params
+    );
 
     Ok(request_path)
 }
@@ -204,9 +217,9 @@ fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::
 ///     // Vector.
 ///     containers: Vec<ListValues>
 /// }
-/// 
+///
 /// ... snip ...
-/// 
+///
 /// let docker_info: ListResponse = serde_json::from_value(request_docker_api("GET", "/containers/json", Some(&format!(r#"all=true&filters={{"name": ["{}"]}}"#, name)))?)?;
 /// ```
 /// Receiveing Object Value
@@ -215,14 +228,18 @@ fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::
 ///     // Not a Vector.
 ///     containers: InspectValues
 /// }
-/// 
+///
 /// ... snip ...
-/// 
+///
 /// let docker_info: InspectResponse = serde_json::from_value(request_docker_api("GET", &format!("/containers/{id}/json", id = id), None)?)?;
 /// ```
-fn request_docker_api(method: &str, path: &str, parameter: Option<&str>) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+fn request_docker_api(
+    method: &str,
+    path: &str,
+    parameter: Option<&str>,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let docker_sock = std::path::Path::new("/var/run/docker.sock");
-    
+
     // Generate request body
     let mut request_path = String::new();
     if let Some(parameter) = parameter {
@@ -230,7 +247,11 @@ fn request_docker_api(method: &str, path: &str, parameter: Option<&str>) -> Resu
     } else {
         request_path = path.to_string();
     }
-    let request = format!("{method} {request_path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n", method = method, request_path = request_path);
+    let request = format!(
+        "{method} {request_path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+        method = method,
+        request_path = request_path
+    );
 
     // println!("request: `{:?}`", request);
     // Request to docker api
@@ -241,8 +262,13 @@ fn request_docker_api(method: &str, path: &str, parameter: Option<&str>) -> Resu
     drop(stream);
 
     // Exclude response header
-    let mut response = response.split_once("\r\n\r\n").ok_or(Error::InvalidResponse)?.1.trim().to_string();
-    
+    let mut response = response
+        .split_once("\r\n\r\n")
+        .ok_or(Error::InvalidResponse)?
+        .1
+        .trim()
+        .to_string();
+
     // Api error catch
     // println!("respo: ```{:?}```", response);
     if response.is_empty() || response == "[]" {
@@ -257,7 +283,9 @@ fn request_docker_api(method: &str, path: &str, parameter: Option<&str>) -> Resu
     // 1522\r\n{"Id":...}\n\r\n0
     let newline_number = response.match_indices('\n').count();
     if newline_number > 1 {
-        response = response.split("\n").collect::<Vec<&str>>()[1].trim().to_string();
+        response = response.split("\n").collect::<Vec<&str>>()[1]
+            .trim()
+            .to_string();
     } else {
         response = response;
     }
@@ -272,11 +300,13 @@ fn request_docker_api(method: &str, path: &str, parameter: Option<&str>) -> Resu
 
 fn catch_error_message(response: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
     if !response.contains(r#""message":"#) {
-        return Ok(None)
+        return Ok(None);
     }
 
     #[derive(Debug, Deserialize)]
-    struct Message { message: String }
+    struct Message {
+        message: String,
+    }
     let message: Message = serde_json::from_str(&response)?;
 
     Ok(Some(message.message))
