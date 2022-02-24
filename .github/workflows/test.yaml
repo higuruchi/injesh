@@ -1,0 +1,75 @@
+name: test
+
+on:
+  push:
+
+env:
+  CACHE_PATH_NGINX: '/tmp/nginx-image-save.tar'
+  NGINX_IMAGE_VERSION: '1.21.6'
+  CACHE_PATH_SCRATCH_WEB: '/tmp/scratch_web-image-save.tar'
+  SCRATCH_WEB_IMAGE_VERSION: 'latest'
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # cache scratch_web docker image test
+      # ------------------------------------------------
+
+      - name: Cache nginx docker image
+        id: cache-scratchweb-test2
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CACHE_PATH_SCRATCH_WEB }}
+          key: ${{ runner.os }}-cache-scratchweb-test2-${{ env.SCRATCH_WEB_IMAGE_VERSION }}
+          restore-keys:
+            ${{ runner.os }}-cache-scratchweb-test2-
+
+      - name: Load docker image from cache
+        if: steps.cache-scratchweb-test2.outputs.cache-hit == 'true'
+        run: docker load --input ${{ env.CACHE_PATH_SCRATCH_WEB }}
+
+      - name: Build scratch web server docker image
+        if: steps.cache-scratchweb-test2.outputs.cache-hit != 'true'
+        run: |
+          docker image build -f scratch_web/Dockerfile -t scratch_web scratch_web/
+          docker save --output ${{ env.CACHE_PATH_SCRATCH_WEB }} scratch_web:${{ env.SCRATCH_WEB_IMAGE_VERSION }}
+
+      # cache nginx docker image test
+      # ------------------------------------------------
+
+      - name: Cache nginx docker image
+        id: cache-nginx-test2
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CACHE_PATH_NGINX }}
+          key: ${{ runner.os }}-cache-nginx-test2-${{ env.NGINX_IMAGE_VERSION }}
+          restore-keys:
+            ${{ runner.os }}-cache-nginx-test2-
+
+      - name: Load docker image from cache
+        if: steps.cache-nginx-test2.outputs.cache-hit == 'true'
+        run: docker load --input ${{ env.CACHE_PATH_NGINX }}
+
+      - name: Pull docker image and save cache
+        if: steps.cache-nginx-test2.outputs.cache-hit != 'true'
+        run: |
+          docker pull nginx:${{ env.NGINX_IMAGE_VERSION }}
+          docker save --output ${{ env.CACHE_PATH_NGINX }} nginx:${{ env.NGINX_IMAGE_VERSION }}
+
+      # start docker container
+      # ------------------------------------------------
+
+      - name: run scratch_web
+        run: docker run -d --name test_scratch_web scratch_web:${{ env.SCRATCH_WEB_IMAGE_VERSION }}
+
+      - name: run nginx
+        run: docker run -d --name test_nginx nginx:${{ env.NGINX_IMAGE_VERSION }}
+
+      # run test
+      # ------------------------------------------------
+
+      - run: cargo test
