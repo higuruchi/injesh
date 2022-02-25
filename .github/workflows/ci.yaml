@@ -2,17 +2,11 @@ name: CI
 
 on:
   push:
-  pull_request:
 
 env:
   CARGO_INCREMENTAL: 1
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: cargo test
 
   build:
     runs-on: ubuntu-latest
