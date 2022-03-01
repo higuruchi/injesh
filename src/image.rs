@@ -25,7 +25,35 @@ pub struct Image {
     /// ```https://us.lxd.images.canonical.com```から取得した
     /// rootfsのメタデータ郡を ユーザが入力したディストリビューション、バージョンを用いてフィルタリングし、
     /// メタデータを格納する
-    images_meta: Vec<ImageMeta>,
+    /// 
+    /// # Exampld
+    /// ```ignore
+    /// [
+    ///     ImageMeta{
+    ///         distribution: "ubuntu",
+    ///         version: "focal",
+    ///         atch: "amd64",
+    ///         time: Time{
+    ///             date: 20220227,
+    ///             hour: 7,
+    ///             minutes: 43, 
+    ///         },
+    ///         path: "/images/ubuntu/focal/arm64/default/20220227_07:43/",
+    ///     },
+    ///     ImageMeta{
+    ///         distribution: "fedora",
+    ///         version: "34",
+    ///         atch: "amd64",
+    ///         time: Time{
+    ///             date: 20220227,
+    ///             hour: 20,
+    ///             minutes: 34, 
+    ///         },
+    ///         path: "/images/fedora/34/amd64/default/20220227_20:34/",
+    ///     },
+    /// ]
+    /// ```
+    specific_images_meta: Vec<ImageMeta>,
 }
 
 #[derive(Debug)]
@@ -65,7 +93,7 @@ impl Image {
             Err(Error::ImageSyntaxError)?
         }
 
-        let images_meta = ImageMeta::new(&user, distri_and_version[0], distri_and_version[1])?;
+        let specific_images_meta = ImageMeta::new(&user, distri_and_version[0], distri_and_version[1])?;
 
         let distribution = distri_and_version[0].to_string();
         let version = distri_and_version[1].to_string();
@@ -75,7 +103,7 @@ impl Image {
             version: version,
             user: user,
             newest: None,
-            images_meta: images_meta,
+            specific_images_meta: specific_images_meta,
         })
     }
 
@@ -91,8 +119,8 @@ impl Image {
         &self.version
     }
 
-    pub fn images_meta(&self) -> &Vec<ImageMeta> {
-        &self.images_meta
+    pub fn specific_images_meta(&self) -> &Vec<ImageMeta> {
+        &self.specific_images_meta
     }
 
     /// ローカルにrootfsイメージがあるかどうか調べる
@@ -269,8 +297,7 @@ impl Image {
         let mut newest_image_url = None;
         let mut newest_time = Time::new(0, 0, 0);
 
-        // self.images_meta().iter()
-        for meta in self.images_meta().iter() {
+        for meta in self.specific_images_meta().iter() {
             if meta.time().compare(&newest_time) == 1 {
                 newest_image_url = Some(meta.path());
 
