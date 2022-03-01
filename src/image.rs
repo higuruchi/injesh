@@ -424,13 +424,6 @@ fn parse_time(time_str: &str) -> Time {
 
 mod tests {
     use super::*;
-    #[test]
-    fn test_download_image() {
-        let user = user::User::new().unwrap();
-        let image = Image::new("ubuntu/focal", user).unwrap();
-
-        image.download_image().unwrap();
-    }
 
     #[test]
     fn test_compare() {
@@ -454,22 +447,5 @@ mod tests {
         {
             assert_eq!(time1.compare(time2), *ans);
         }
-    }
-
-    #[test]
-    fn test_image_is_newest() {
-        let user = user::User::new().unwrap();
-        let image = Image::new("ubuntu/focal", user).unwrap();
-        image.download_image().unwrap();
-        let result = image.image_is_newest().unwrap();
-        assert_eq!(result, true);
-    }
-
-    #[test]
-    fn test_search_image() {
-        let user = user::User::new().unwrap();
-        let image = Image::new("ubuntu/focal", user).unwrap();
-        image.download_image().unwrap();
-        image.search_image().unwrap();
     }
 }
