@@ -2,6 +2,7 @@ pub mod cmd;
 mod command;
 mod container;
 pub mod handler;
+mod image;
 pub mod parser;
 mod user;
 mod utils;
