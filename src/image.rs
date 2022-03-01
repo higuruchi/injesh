@@ -1,15 +1,17 @@
 use crate::user;
 use std::fs::{self, File};
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{error, fmt};
 use tar::Archive;
 use xz2::read::XzDecoder;
+use regex::Regex;
 
 const ROOTFS_SERVER_DOMAIN: &str = "https://us.lxd.images.canonical.com";
 const ROOTFS_FILE: &str = "rootfs.tar.xz";
 const ROOTFS_HASH_FILE: &str = "rootfs.tar.xz.asc";
-const IMAGE_META: &str = "https://uk.lxd.images.canonical.com/meta/1.0/index-user";
+const IMAGE_META_URL: &str = "https://uk.lxd.images.canonical.com/meta/1.0/index-user";
+const ROOTFS: &str = "rootfs";
 
 /// rootfsを管理するための構造体
 #[derive(Debug)]
@@ -54,6 +56,8 @@ pub struct Image {
     /// ]
     /// ```
     specific_images_meta: Vec<ImageMeta>,
+    /// rootfsへのpathを格納する
+    rootfs_and_hashfile_path: PathBuf,
 }
 
 #[derive(Debug)]
@@ -87,16 +91,20 @@ impl Image {
     /// let image = image::Image::new("ubuntu/focal", user);
     /// ```
     pub fn new(image: &str, user: user::User) -> Result<Image, Box<dyn std::error::Error>> {
-        let distri_and_version: Vec<&str> = image.split("/").collect();
-
-        if distri_and_version.len() != 2 {
+        if Regex::new(r"^.+/.+$").unwrap().is_match(image) {
             Err(Error::ImageSyntaxError)?
         }
+        let distri_and_version: Vec<&str> = image.split("/").collect();
 
         let specific_images_meta = ImageMeta::new(&user, distri_and_version[0], distri_and_version[1])?;
-
         let distribution = distri_and_version[0].to_string();
         let version = distri_and_version[1].to_string();
+        let rootfs_path = PathBuf::from(&format!(
+            "{}/{}/{}",
+            user.images(),
+            &distribution,
+            &version
+        ));
 
         Ok(Image {
             distribution: distribution,
@@ -104,23 +112,44 @@ impl Image {
             user: user,
             newest: None,
             specific_images_meta: specific_images_meta,
+            rootfs_and_hashfile_path: rootfs_path,
         })
     }
 
-    pub fn user(&self) -> &user::User {
+    fn user(&self) -> &user::User {
         &self.user
     }
 
-    pub fn distribution(&self) -> &str {
+    fn distribution(&self) -> &str {
         &self.distribution
     }
 
-    pub fn version(&self) -> &str {
+    fn version(&self) -> &str {
         &self.version
     }
 
-    pub fn specific_images_meta(&self) -> &Vec<ImageMeta> {
+    fn specific_images_meta(&self) -> &Vec<ImageMeta> {
         &self.specific_images_meta
+    }
+
+    /// 任意のディストリビューション、バージョンのrootfsやhash fileを入れるpathを返却
+    fn rootfs_and_hashfile_path(&self) -> &Path {
+        self.rootfs_and_hashfile_path.as_path()
+    }
+
+    /// 任意のディストリビューション、バージョンのhash fileへのpathを返却
+    fn rootfs_hash_path(&self) -> PathBuf {
+        PathBuf::from(&format!("{}/{}", self.rootfs_and_hashfile_path().display(), ROOTFS_HASH_FILE))
+    }
+
+    /// 任意のディストリビューション、バージョンのダウンロードされるrootfs.tar.xzへのpathを返却
+    fn downloaded_rootfs_path(&self) -> PathBuf {
+        PathBuf::from(&format!("{}/{}", self.rootfs_and_hashfile_path().display(), ROOTFS_FILE))
+    }
+
+    /// 任意のディストリビューション、バージョンのrootfsへのpathを返却
+    fn rootfs_path(&self) -> PathBuf {
+        PathBuf::from(&format!("{}/{}", self.rootfs_and_hashfile_path().display(), ROOTFS))
     }
 
     /// ローカルにrootfsイメージがあるかどうか調べる
@@ -130,12 +159,7 @@ impl Image {
     /// image.search_image();
     /// ```
     pub fn search_image(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if Path::new(&format!(
-            "{}/{}/{}",
-            self.user().images(),
-            self.distribution(),
-            self.version()
-        ))
+        if Path::new(self.rootfs_and_hashfile_path())
         .exists()
         {
             return Ok(());
@@ -143,22 +167,22 @@ impl Image {
         Err(Error::ImageNotFound)?
     }
 
+    /// ローカルにあるイメージが最新のものかどうかを調べる
+    /// 
+    /// # Example
+    /// ```ignore
+    /// image.image_is_newes();
+    /// ```
     pub fn image_is_newest(&self) -> Result<bool, Box<dyn std::error::Error>> {
-        let path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
+        let newest_path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
 
         let downloaded_rootfs_hash = reqwest::blocking::get(format!(
             "{}/{}/{}",
-            ROOTFS_SERVER_DOMAIN, path, ROOTFS_HASH_FILE
+            ROOTFS_SERVER_DOMAIN, newest_path, ROOTFS_HASH_FILE
         ))?
         .text()?;
 
-        let rootfs_hash = fs::read_to_string(format!(
-            "{}/{}/{}/{}",
-            self.user().images(),
-            self.distribution(),
-            self.version(),
-            ROOTFS_HASH_FILE
-        ))?;
+        let rootfs_hash = fs::read_to_string(self.rootfs_hash_path())?;
 
         if downloaded_rootfs_hash == rootfs_hash {
             Ok(true)
@@ -179,49 +203,34 @@ impl Image {
     pub fn download_image(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.setup_rootfs_directory()?;
 
-        let src = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
+        let newest_path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
 
-        let rootfs_filenmae = format!(
-            "{}/{}/{}/{}",
-            self.user().images(),
-            self.distribution(),
-            self.version(),
-            ROOTFS_FILE
-        );
-        let hash_filename = format!(
-            "{}/{}/{}/{}",
-            self.user().images(),
-            self.distribution(),
-            self.version(),
-            ROOTFS_HASH_FILE
-        );
-
+        // rootfsをダウンロード
         let rootfs_resp =
-            reqwest::blocking::get(format!("{}/{}/{}", ROOTFS_SERVER_DOMAIN, src, ROOTFS_FILE))?
+            reqwest::blocking::get(format!("{}/{}/{}", ROOTFS_SERVER_DOMAIN, newest_path, ROOTFS_FILE))?
                 .bytes()?;
-        let mut rootfs_out = File::create(&rootfs_filenmae)?;
+        // ダウンロードしたrootfsデータを書き込むファイルを作成 and 書き込み
+        let mut rootfs_out = File::create(self.downloaded_rootfs_path())?;
         io::copy(&mut rootfs_resp.as_ref(), &mut rootfs_out)?;
-
+        
+        // rootfsのhashフィあるをダウンロード
         let hash_resp = reqwest::blocking::get(format!(
             "{}/{}/{}",
-            ROOTFS_SERVER_DOMAIN, src, ROOTFS_HASH_FILE
+            ROOTFS_SERVER_DOMAIN, newest_path, ROOTFS_HASH_FILE
         ))?
         .bytes()?;
-        let mut hash_out = File::create(&hash_filename)?;
+        // rootfsのhashファイルを書き込むファイルを作成 and 書き込み
+        let mut hash_out = File::create(self.rootfs_hash_path())?;
         io::copy(&mut hash_resp.as_ref(), &mut hash_out)?;
 
-        let tar_xz = File::open(&rootfs_filenmae)?;
+        // ダウンロードしたrootfsを解凍
+        let tar_xz = File::open(self.downloaded_rootfs_path())?;
         let tar = XzDecoder::new(tar_xz);
         let mut archive = Archive::new(tar);
-        archive.unpack(format!(
-            "{}/{}/{}/{}",
-            self.user().images(),
-            self.distribution(),
-            self.version(),
-            "rootfs"
-        ))?;
+        archive.unpack(self.downloaded_rootfs_path())?;
 
-        fs::remove_file(rootfs_filenmae)?;
+        // ダウンロードしたtarファイルを削除
+        fs::remove_file(self.downloaded_rootfs_path())?;
 
         Ok(())
     }
@@ -337,7 +346,7 @@ impl ImageMeta {
         distri: &str,
         version: &str,
     ) -> Result<Vec<ImageMeta>, Box<dyn std::error::Error>> {
-        let resp = reqwest::blocking::get(IMAGE_META)?.text()?;
+        let resp = reqwest::blocking::get(IMAGE_META_URL)?.text()?;
         let image_info: Vec<&str> = resp.split('\n').collect();
         let image_candidates: Vec<ImageMeta> = image_info
             .into_iter()
