@@ -51,7 +51,7 @@ impl Image {
     /// Image構造体のコンストラクタ
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// use crate::user;
     /// use crate::image;
     ///
@@ -98,7 +98,7 @@ impl Image {
     /// ローカルにrootfsイメージがあるかどうか調べる
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// image.search_image();
     /// ```
     pub fn search_image(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -145,7 +145,7 @@ impl Image {
     /// 呼び出す必要がある
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// image.download_image();
     /// ```
     pub fn download_image(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -201,7 +201,7 @@ impl Image {
     /// rootfsイメージを格納するディレクトリを生成する
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// image.setup_rootfs_directory();
     /// ```
     fn setup_rootfs_directory(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -259,7 +259,7 @@ impl Image {
     /// 最新のrootfsのurlを取得する
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// let url = image.newest_url();
     /// ```
     ///
@@ -302,7 +302,7 @@ impl ImageMeta {
     /// ImageMeta構造体のコンストラクタ
     ///
     /// # Exapmle
-    /// ```
+    /// ```ignore
     /// let image = ImageMeta::new(user, "ubuntu", "focal");
     /// ```
     fn new(
@@ -375,7 +375,7 @@ impl Time {
     /// Time構造体のコンストラクタ
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// let time = Time::new(20220227, 2 27)
     /// ```
     fn new(date: u64, hour: u64, minutes: u64) -> Time {
@@ -389,7 +389,7 @@ impl Time {
     /// Time構造体を比較する
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// time1.compare(time1);
     /// ```
     ///
