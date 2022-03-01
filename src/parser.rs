@@ -1,6 +1,7 @@
 use crate::command::{
     self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand,
 };
+use crate::{image, user};
 use clap::{App, Arg};
 use std::path::PathBuf;
 
@@ -232,7 +233,7 @@ fn check_rootfs(
     opt_rootfs_image: Option<&str>,
     opt_rootfs_docker: Option<&str>,
     opt_rootfs_lxd: Option<&str>,
-) -> Result<RootFSOption, command::Error> {
+) -> Result<RootFSOption, Box<dyn std::error::Error>> {
     let mut num_of_some = 0;
     let mut rootfs = command::RootFSOption::None;
 
@@ -242,7 +243,9 @@ fn check_rootfs(
     }
     if opt_rootfs_image.is_some() {
         num_of_some += 1;
-        rootfs = RootFSOption::RootfsImage(String::from(opt_rootfs_image.unwrap_or("")));
+        let user = user::User::new()?;
+        let image = image::Image::new(opt_rootfs_image.unwrap_or(""), user)?;
+        rootfs = RootFSOption::RootfsImage(image);
     }
     if opt_rootfs_docker.is_some() {
         num_of_some += 1;
@@ -254,7 +257,7 @@ fn check_rootfs(
     }
 
     if num_of_some > 1 {
-        return Err(Error::CommandError);
+        return Err(Error::CommandError)?;
     }
 
     Ok(rootfs)

@@ -1,4 +1,4 @@
-use crate::user;
+use crate::{image, user};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -124,7 +124,7 @@ pub mod list_error {
 #[derive(Debug)]
 pub enum RootFSOption {
     Rootfs(PathBuf),
-    RootfsImage(String),
+    RootfsImage(image::Image),
     RootfsDocker(String),
     RootfsLxd(String),
     None,
