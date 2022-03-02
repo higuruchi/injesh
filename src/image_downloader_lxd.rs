@@ -1,5 +1,6 @@
 use crate::image_downloader;
 use chrono::NaiveDateTime;
+use regex::Regex;
 use std::cmp::Ordering;
 use std::fs::{self, File};
 use std::io;
@@ -198,9 +199,15 @@ impl ImageMeta {
     ) -> Result<Vec<ImageMeta>, Box<dyn std::error::Error>> {
         let resp = reqwest::blocking::get(IMAGE_META_URL)?.text()?;
         let image_info: Vec<&str> = resp.split('\n').collect();
+        let re = Regex::new(r"^(.+;){5}(/.+){6}/$")?;
+
         let image_candidates: Vec<ImageMeta> = image_info
             .into_iter()
             .filter_map(|image_candidate| {
+                if !re.is_match(image_candidate) {
+                    return None;
+                }
+
                 let image_parsed_info: Vec<&str> = image_candidate.split(';').collect();
 
                 let time = match parse_time(image_parsed_info[4]) {
@@ -256,6 +263,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_download_rootfs() {
         use crate::image_downloader::Downloader as DownloaderTrait;
 
@@ -268,6 +276,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn download_rootfs_hash() {
         use crate::image_downloader::Downloader as DownloaderTrait;
 
@@ -285,6 +294,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_check_rootfs_newest() {
         use crate::image_downloader::Downloader as DownloaderTrait;
 

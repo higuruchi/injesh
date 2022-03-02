@@ -14,3 +14,5 @@ mod image_downloader_lxd;
 mod init;
 mod launch;
 mod list;
+
+mod test_image;
