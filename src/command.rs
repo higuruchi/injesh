@@ -1,4 +1,4 @@
-use crate::{image, user};
+use crate::{image, image_downloader, user};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -20,10 +20,13 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 #[derive(Debug)]
-pub enum SubCommand {
+pub enum SubCommand<D>
+where
+    D: image_downloader::Downloader,
+{
     Exec(Exec),
     Init(Init),
-    Launch(Launch),
+    Launch(Launch<D>),
     List(List),
     Delete(Delete),
     File(FileSubCommand),
@@ -79,9 +82,12 @@ pub mod exec_error {
 }
 
 #[derive(Debug)]
-pub struct Launch {
+pub struct Launch<D>
+where
+    D: image_downloader::Downloader,
+{
     target_container: String,
-    rootfs_option: RootFSOption,
+    rootfs_option: RootFSOption<D>,
     name: String,
     cmd: Option<String>,
 }
@@ -122,9 +128,12 @@ pub mod list_error {
 }
 
 #[derive(Debug)]
-pub enum RootFSOption {
+pub enum RootFSOption<D>
+where
+    D: image_downloader::Downloader,
+{
     Rootfs(PathBuf),
-    RootfsImage(image::Image),
+    RootfsImage(image::Image<D>),
     RootfsDocker(String),
     RootfsLxd(String),
     None,
@@ -225,13 +234,16 @@ impl Init {
     }
 }
 
-impl Launch {
+impl<D> Launch<D>
+where
+    D: image_downloader::Downloader,
+{
     pub fn new(
         target_container: String,
-        rootfs_option: RootFSOption,
+        rootfs_option: RootFSOption<D>,
         name: String,
         cmd: Option<String>,
-    ) -> Launch {
+    ) -> Launch<D> {
         Launch {
             target_container: target_container,
             rootfs_option: rootfs_option,
