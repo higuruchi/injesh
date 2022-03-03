@@ -1,7 +1,9 @@
 use crate::command::{
     self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand,
 };
+use crate::{image, image_downloader, image_downloader_lxd, user};
 use clap::{App, Arg};
+use regex::Regex;
 use std::path::PathBuf;
 
 const INIT: &str = "init";
@@ -20,7 +22,8 @@ const OPT_ROOTFS_DOCKER: &str = "--rootfs-docker";
 const OPT_ROOTFS_LXD: &str = "--rootfs-lxd";
 const CONTAINER_ID_OR_NAME: &str = "Container ID or name";
 
-pub fn parse() -> Result<SubCommand, Box<dyn std::error::Error>> {
+pub fn parse() -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>>
+{
     let about_this_app =
         "Applications for debugging into containers without shells such as distroless and scratch. 
 It is possible to enter a container by sharing namespaces \
@@ -232,7 +235,7 @@ fn check_rootfs(
     opt_rootfs_image: Option<&str>,
     opt_rootfs_docker: Option<&str>,
     opt_rootfs_lxd: Option<&str>,
-) -> Result<RootFSOption, command::Error> {
+) -> Result<RootFSOption<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
     let mut num_of_some = 0;
     let mut rootfs = command::RootFSOption::None;
 
@@ -242,7 +245,22 @@ fn check_rootfs(
     }
     if opt_rootfs_image.is_some() {
         num_of_some += 1;
-        rootfs = RootFSOption::RootfsImage(String::from(opt_rootfs_image.unwrap_or("")));
+        let user = user::User::new()?;
+        let image_input = opt_rootfs_image.unwrap();
+
+        if !Regex::new(r"^.+/.+$").unwrap().is_match(image_input) {
+            Err(crate::image::Error::ImageSyntaxError)?
+        }
+        let distri_and_version: Vec<&str> = image_input.split("/").collect();
+
+        let download = image_downloader_lxd::Downloader::new(
+            distri_and_version[0],
+            distri_and_version[1],
+            "amd64",
+        )?;
+        let image =
+            image::Image::new(distri_and_version[0], distri_and_version[1], user, download)?;
+        rootfs = RootFSOption::RootfsImage(image);
     }
     if opt_rootfs_docker.is_some() {
         num_of_some += 1;
@@ -254,7 +272,7 @@ fn check_rootfs(
     }
 
     if num_of_some > 1 {
-        return Err(Error::CommandError);
+        return Err(Error::CommandError)?;
     }
 
     Ok(rootfs)
