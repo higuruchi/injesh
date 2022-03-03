@@ -8,6 +8,7 @@ env:
   NGINX_IMAGE_VERSION: '1.21.6'
   CACHE_PATH_SCRATCH_WEB: '/tmp/scratch_web-image-save.tar'
   SCRATCH_WEB_IMAGE_VERSION: 'latest'
+  GRM_PATH: '/tmp/git-restore-mtime.py'
 
 jobs:
 
