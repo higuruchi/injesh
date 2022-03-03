@@ -172,12 +172,12 @@ where
             }
         }
 
-        // rootfsディレクトリがないならば作る
-        // ある場合はrootfsディレクトリ以下を削除する
-        if !Path::new(&self.rootfs_path()).exists() {
-            fs::create_dir_all(&self.rootfs_path())?;
-        } else {
+        // rootfsディレクトリがある場合はrootfsディレクトリ以下を削除する
+        // ない場合は作成する
+        if Path::new(&self.rootfs_path()).exists() {
             fs::remove_dir_all(&self.rootfs_path())?;
+        } else {
+            fs::create_dir_all(&self.rootfs_path())?;
         }
 
         self.downloader
