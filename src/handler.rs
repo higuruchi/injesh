@@ -1,19 +1,21 @@
 use crate::command::SubCommand;
 use crate::delete::Delete;
 use crate::exec::Exec;
+use crate::image_downloader::Downloader;
 use crate::init::Init;
 use crate::launch::Launch;
 use crate::list::List;
 
-pub struct HandlerStruct<I, L, LA, E, D>
+pub struct HandlerStruct<I, L, LA, E, D, DO>
 where
     I: Init,
     L: List,
-    LA: Launch,
+    LA: Launch<DO>,
     E: Exec,
     D: Delete,
+    DO: Downloader,
 {
-    command: SubCommand,
+    command: SubCommand<DO>,
     init: I,
     list: L,
     launch: LA,
@@ -25,13 +27,14 @@ pub trait Handler {
     fn run(&self);
 }
 
-impl<I, L, LA, E, D> Handler for HandlerStruct<I, L, LA, E, D>
+impl<I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
 where
     I: Init,
     L: List,
-    LA: Launch,
+    LA: Launch<DO>,
     E: Exec,
     D: Delete,
+    DO: Downloader,
 {
     fn run(&self) {
         match &self.command {
@@ -61,16 +64,17 @@ where
     }
 }
 
-impl<I, L, LA, E, D> HandlerStruct<I, L, LA, E, D>
+impl<I, L, LA, E, D, DO> HandlerStruct<I, L, LA, E, D, DO>
 where
     I: Init,
     L: List,
-    LA: Launch,
+    LA: Launch<DO>,
     E: Exec,
     D: Delete,
+    DO: Downloader,
 {
     pub fn new(
-        command: SubCommand,
+        command: SubCommand<DO>,
         init: I,
         list: L,
         launch: LA,
