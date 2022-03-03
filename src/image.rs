@@ -172,7 +172,13 @@ where
             }
         }
 
-        self.setup_rootfs_directory()?;
+        // rootfsディレクトリがないならば作る
+        // ある場合はrootfsディレクトリ以下を削除する
+        if !Path::new(&self.rootfs_path()).exists() {
+            fs::create_dir_all(&self.rootfs_path())?;
+        } else {
+            fs::remove_dir_all(&self.rootfs_path())?;
+        }
 
         self.downloader
             .download_rootfs(&self.downloaded_rootfs_path())?;
@@ -188,33 +194,6 @@ where
 
         // ダウンロードしたtarファイルを削除
         fs::remove_file(self.downloaded_rootfs_path())?;
-
-        Ok(())
-    }
-
-    /// rootfsイメージを格納するディレクトリを生成する
-    /// 既に```~/.injesh/distri/version/rootfs```以下が存在する場合削除する
-    ///
-    /// # Example
-    /// ```ignore
-    /// image.setup_rootfs_directory();
-    /// ```
-    fn setup_rootfs_directory(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // rootfsのディストリビューションを表すディレクトリのチェック
-        if !Path::new(&format!("{}/{}", self.user().images(), self.distribution())).exists() {
-            fs::create_dir(format!("{}/{}", self.user().images(), self.distribution()))?
-        }
-
-        // rootfsのバージョンを表すディレクトリのチェック
-        if !Path::new(self.image_base_path()).exists() {
-            fs::create_dir(self.image_base_path())?
-        }
-
-        if !Path::new(&self.rootfs_path()).exists() {
-            fs::create_dir(&self.rootfs_path())?;
-        } else {
-            fs::remove_dir_all(&self.rootfs_path())?;
-        }
 
         Ok(())
     }
