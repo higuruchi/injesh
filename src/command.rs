@@ -108,7 +108,7 @@ pub mod list_error {
             match self {
                 Error::ReadDirError(err) => {
                     let injesh_home = match List::new() {
-                        Ok(user) => user.get_user().injesh_home().to_string(),
+                        Ok(user) => user.user().injesh_home().to_string(),
                         Err(_) => "[injesh_home]".to_string(),
                     };
                     write!(f, "Failed to reading {}: {}.", injesh_home, err)
@@ -248,7 +248,7 @@ impl List {
         Ok(List { user: user_info })
     }
 
-    pub fn get_user(&self) -> &user::User {
+    pub fn user(&self) -> &user::User {
         &self.user
     }
 }
