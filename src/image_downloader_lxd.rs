@@ -108,7 +108,7 @@ impl Downloader {
 }
 
 impl image_downloader::Downloader for Downloader {
-    fn download_rootfs(&self, to: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    fn download_rootfs(&self, destination: &Path) -> Result<(), Box<dyn std::error::Error>> {
         let newest_path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
 
         let rootfs_resp = reqwest::blocking::get(format!(
@@ -117,13 +117,13 @@ impl image_downloader::Downloader for Downloader {
         ))?
         .bytes()?;
         // ダウンロードしたrootfsデータを書き込むファイルを作成 and 書き込み
-        let mut rootfs_out = File::create(to)?;
+        let mut rootfs_out = File::create(destination)?;
         io::copy(&mut rootfs_resp.as_ref(), &mut rootfs_out)?;
 
         Ok(())
     }
 
-    fn download_rootfs_hash(&self, to: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    fn download_rootfs_hash(&self, destination: &Path) -> Result<(), Box<dyn std::error::Error>> {
         let newest_path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
 
         // rootfsのhashフィあるをダウンロード
@@ -133,7 +133,7 @@ impl image_downloader::Downloader for Downloader {
         ))?
         .bytes()?;
 
-        let mut hash_out = File::create(to)?;
+        let mut hash_out = File::create(destination)?;
         io::copy(&mut hash_resp.as_ref(), &mut hash_out)?;
 
         Ok(())
