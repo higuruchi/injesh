@@ -46,11 +46,11 @@ pub struct Downloader {
     ///         path: "/images/ubuntu/focal/arm64/default/20220227_07:43/",
     ///     },
     ///     ImageMeta{
-    ///         distribution: "fedora",
-    ///         version: "34",
+    ///         distribution: "ubuntu",
+    ///         version: "focal",
     ///         atch: "amd64",
     ///         time: NaviveDateTime,
-    ///         path: "/images/fedora/34/amd64/default/20220227_20:34/",
+    ///         path: "/images/ubuntu/focal/arm64/default/20220228_07:43/",
     ///     },
     /// ]
     /// ```
@@ -108,13 +108,7 @@ impl Downloader {
 }
 
 impl image_downloader::Downloader for Downloader {
-    fn download_rootfs(
-        &self,
-        distribution: &str,
-        version: &str,
-        arch: &str,
-        to: &Path,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn download_rootfs(&self, to: &Path) -> Result<(), Box<dyn std::error::Error>> {
         let newest_path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
 
         let rootfs_resp = reqwest::blocking::get(format!(
@@ -129,13 +123,7 @@ impl image_downloader::Downloader for Downloader {
         Ok(())
     }
 
-    fn download_rootfs_hash(
-        &self,
-        distribution: &str,
-        version: &str,
-        arch: &str,
-        to: &Path,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn download_rootfs_hash(&self, to: &Path) -> Result<(), Box<dyn std::error::Error>> {
         let newest_path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
 
         // rootfsのhashフィあるをダウンロード
@@ -151,7 +139,10 @@ impl image_downloader::Downloader for Downloader {
         Ok(())
     }
 
-    fn check_rootfs_newest(&self, to: &Path) -> Result<bool, Box<dyn std::error::Error>> {
+    fn check_rootfs_newest(
+        &self,
+        local_rootfs_hash_path: &Path,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
         let newest_path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
 
         let downloaded_rootfs_hash = reqwest::blocking::get(format!(
@@ -160,7 +151,7 @@ impl image_downloader::Downloader for Downloader {
         ))?
         .text()?;
 
-        let rootfs_hash = fs::read_to_string(to)?;
+        let rootfs_hash = fs::read_to_string(local_rootfs_hash_path)?;
 
         if downloaded_rootfs_hash == rootfs_hash {
             Ok(true)
@@ -269,7 +260,7 @@ mod tests {
 
         let image_downloader_lxd = Downloader::new("alpine", "3.15", "arm64").unwrap();
         image_downloader_lxd
-            .download_rootfs("alpine", "3.15", "arm64", Path::new("/tmp/rootfs.tar.xz"))
+            .download_rootfs(Path::new("/tmp/rootfs.tar.xz"))
             .unwrap();
 
         assert!(Path::new("/tmp/rootfs.tar.xz").exists())
@@ -282,12 +273,7 @@ mod tests {
 
         let image_downloader_lxd = Downloader::new("alpine", "3.15", "arm64").unwrap();
         image_downloader_lxd
-            .download_rootfs_hash(
-                "alpine",
-                "3.15",
-                "arm64",
-                Path::new("/tmp/rootfs.tar.xz.asc"),
-            )
+            .download_rootfs_hash(Path::new("/tmp/rootfs.tar.xz.asc"))
             .unwrap();
 
         assert!(Path::new("/tmp/rootfs.tar.xz.asc").exists())

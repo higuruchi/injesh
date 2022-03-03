@@ -52,9 +52,11 @@ where
     /// ```ignore
     /// use crate::user;
     /// use crate::image;
+    /// use crate::image_downloader_lxd;
     ///
     /// let user = user::User::new().unwrap();
-    /// let image = image::Image::new("ubuntu/focal", user);
+    /// let downloader = image_downloader_lxd::Downloader::new("ubuntu", "focal", "amd64");
+    /// let image = image::Image::new("ubuntu", "focal", user, downloader);
     /// ```
     pub fn new(
         distribution: &str,
@@ -132,7 +134,7 @@ where
     /// image.search_image();
     /// ```
     pub fn search_image(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if Path::new(self.image_base_path()).exists() {
+        if self.rootfs_hash_path().exists() {
             return Ok(());
         }
         Err(Error::ImageNotFound)?
@@ -145,8 +147,6 @@ where
     /// image.image_is_newes();
     /// ```
     pub fn check_rootfs_newest(&self) -> Result<bool, Box<dyn std::error::Error>> {
-        println!("rootfs: {:?}", self.rootfs_hash_path());
-
         self.downloader
             .check_rootfs_newest(&self.rootfs_hash_path())
     }
@@ -161,21 +161,24 @@ where
     /// image.download_image();
     /// ```
     pub fn download_image(&self) -> Result<(), Box<dyn std::error::Error>> {
+        // ローカルにあるrootfsが最新のものかどうかを確認
+        if Path::new(&self.rootfs_hash_path()).exists() {
+            match self.check_rootfs_newest() {
+                Ok(newest_flg) => match newest_flg {
+                    true => return Ok(()),
+                    false => { /* do nothing */ }
+                },
+                Err(_) => { /* do nothing */ }
+            }
+        }
+
         self.setup_rootfs_directory()?;
 
-        self.downloader.download_rootfs(
-            self.distribution(),
-            self.version(),
-            "amd64",
-            &self.downloaded_rootfs_path(),
-        )?;
+        self.downloader
+            .download_rootfs(&self.downloaded_rootfs_path())?;
 
-        self.downloader.download_rootfs_hash(
-            self.distribution(),
-            self.version(),
-            "amd64",
-            &self.rootfs_hash_path(),
-        )?;
+        self.downloader
+            .download_rootfs_hash(&self.rootfs_hash_path())?;
 
         // ダウンロードしたrootfsを解凍
         let tar_xz = File::open(self.downloaded_rootfs_path())?;
@@ -190,6 +193,7 @@ where
     }
 
     /// rootfsイメージを格納するディレクトリを生成する
+    /// 既に```~/.injesh/distri/version/rootfs```以下が存在する場合削除する
     ///
     /// # Example
     /// ```ignore
@@ -202,46 +206,14 @@ where
         }
 
         // rootfsのバージョンを表すディレクトリのチェック
-        if !Path::new(&format!(
-            "{}/{}/{}",
-            self.user().images(),
-            self.distribution(),
-            self.version()
-        ))
-        .exists()
-        {
-            fs::create_dir(format!(
-                "{}/{}/{}",
-                self.user().images(),
-                self.distribution(),
-                self.version()
-            ))?
+        if !Path::new(self.image_base_path()).exists() {
+            fs::create_dir(self.image_base_path())?
         }
 
-        if !Path::new(&format!(
-            "{}/{}/{}/{}",
-            self.user().images(),
-            self.distribution(),
-            self.version(),
-            "rootfs"
-        ))
-        .exists()
-        {
-            fs::create_dir(format!(
-                "{}/{}/{}/{}",
-                self.user().images(),
-                self.distribution(),
-                self.version(),
-                "rootfs"
-            ))?;
+        if !Path::new(&self.rootfs_path()).exists() {
+            fs::create_dir(&self.rootfs_path())?;
         } else {
-            fs::remove_dir_all(format!(
-                "{}/{}/{}/{}",
-                self.user().images(),
-                self.distribution(),
-                self.version(),
-                "rootfs"
-            ))?;
+            fs::remove_dir_all(&self.rootfs_path())?;
         }
 
         Ok(())
