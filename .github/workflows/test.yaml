@@ -9,6 +9,7 @@ env:
   CACHE_PATH_SCRATCH_WEB: '/tmp/scratch_web-image-save.tar'
   SCRATCH_WEB_IMAGE_VERSION: 'latest'
   GRM_PATH: '/tmp/git-restore-mtime.py'
+  CARGO_INCREMENTAL: 1
 
 jobs:
 
