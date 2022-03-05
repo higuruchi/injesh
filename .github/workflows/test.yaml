@@ -44,9 +44,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles( format('{0}{1}', github.workspace, '/Cargo.lock') ) }}
+          key: ${{ runner.os }}-cache-rustlibs-${{ hashFiles( format('{0}{1}', github.workspace, '/Cargo.lock') ) }}
           restore-keys:
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cache-rustlibs-
 
       # cache scratch_web docker image test
       # ------------------------------------------------
