@@ -9,6 +9,23 @@ env:
 
 jobs:
 
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: format
+        run: cargo fmt
+      - name: push
+        if: github.event_name == 'push'
+        run: |
+          if [ -n "$(git diff)" ]; then
+            git config --local user.name "${GITHUB_ACTOR}"
+            git config --local user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+            git remote set-url origin "https://${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
+            git add .
+            git commit -m "format: ${GITHUB_SHA::7}"
+            git push origin ${GITHUB_REF#refs/heads/}
+          fi
+
   build:
     runs-on: ubuntu-latest
     strategy:
