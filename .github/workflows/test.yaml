@@ -8,6 +8,8 @@ env:
   NGINX_IMAGE_VERSION: '1.21.6'
   CACHE_PATH_SCRATCH_WEB: '/tmp/scratch_web-image-save.tar'
   SCRATCH_WEB_IMAGE_VERSION: 'latest'
+  GRM_PATH: '/tmp/git-restore-mtime.py'
+  CARGO_INCREMENTAL: 1
 
 jobs:
 
@@ -15,6 +17,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+            # Fetch all commit history for mtime
+            fetch-depth: 0
+
+      # Cache rust crates
+      # ------------------------------------------------
+
+      # Cache
+      - name: Cache git-restore-mtime script
+        id: cache-grm
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.GRM_PATH }}
+          key: ${{ runner.os }}-git-restore-mtime
+      - name: DL if no cache hit
+        if: steps.cache-grm.outputs.cache-hit != 'true'
+        run: curl -Lo ${{ env.GRM_PATH }} "https://github.com/MestreLion/git-tools/raw/main/git-restore-mtime"
+      - name: Restore mtime
+        run: python ${{ env.GRM_PATH }}
+
+      - name: Cache rust libs
+        id: cache-rustlibs
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cache-rustlibs-${{ hashFiles( format('{0}{1}', github.workspace, '/Cargo.lock') ) }}
+          restore-keys:
+            ${{ runner.os }}-cache-rustlibs-
 
       # cache scratch_web docker image test
       # ------------------------------------------------
