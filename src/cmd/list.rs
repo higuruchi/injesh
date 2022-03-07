@@ -44,11 +44,7 @@ fn extract_container_names(
     Ok(container_names)
 }
 
-impl ListStruct {
-    pub fn new() -> Self {
-        ListStruct
-    }
-}
+impl ListStruct { pub fn new() -> Self { ListStruct }}
 
 impl Default for ListStruct {
     fn default() -> Self {
