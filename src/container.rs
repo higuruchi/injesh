@@ -155,6 +155,12 @@ impl Container {
 
         Ok(id)
     }
+    pub fn restart(name: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let id = Self::convert_name_to_id(name)?;
+        request_docker_api("POST", &format!("/containers/{id}/restart", id = id), None)?;
+
+        Ok(())
+    }
 }
 
 fn get_pid_from_container_id(target_container_id: &str) -> Result<u32, Box<dyn std::error::Error>> {
