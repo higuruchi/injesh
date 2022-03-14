@@ -122,6 +122,18 @@ impl Container {
     pub fn pid(&self) -> u32 {
         self.pid
     }
+    pub fn lowerdir(&self) -> &std::path::PathBuf {
+        &self.lowerdir
+    }
+    pub fn mergeddir(&self) -> &std::path::PathBuf {
+        &self.mergeddir
+    }
+    pub fn upperdir(&self) -> &std::path::PathBuf {
+        &self.upperdir
+    }
+    pub fn workdir(&self) -> &std::path::PathBuf {
+        &self.workdir
+    }
     pub fn convert_name_to_id(name: &str) -> Result<String, Box<dyn std::error::Error>> {
         // as commandline:
         // curl --unix-socket /var/run/docker.sock -X GET "http://localhost/containers/json?all=true&filters=$( python3 -c 'import urllib.parse; print( urllib.parse.quote("""{"name": ["beautiful_curran"]}""") )' )"
