@@ -216,29 +216,29 @@ fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::
 
 /// Hitting Docker API Interface.  
 /// See API reference: https://docs.docker.com/engine/api/latest/
-/// 
+///
 /// # Params:
-/// 
+///
 /// - method: GET, POST, etc
 /// - path: "/containers/json", etc
 /// - parameter: Some("filters={"name":"hoge"}"), None, etc
-/// 
+///
 /// # response:
-/// 
+///
 /// type: String  
 /// receiving json format:
-/// 
+///
 /// ```ignore
 /// {"containers": {API response body}}
 /// ```
-/// 
+///
 /// So, We must receive values using `containers` key.  
 /// Deserializing by `serde_json::from_str()` is useful.
-/// 
+///
 /// # Example:
-/// 
+///
 /// Receiveing Array Value
-/// 
+///
 /// ```ignore
 /// struct ListResponse {
 ///     // Vector.
@@ -249,9 +249,9 @@ fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::
 ///
 /// let docker_info: ListResponse = serde_json::from_str(&request_docker_api("GET", "/containers/json", Some(&format!(r#"all=true&filters={{"name": ["{}"]}}"#, name)))?)?;
 /// ```
-/// 
+///
 /// Receiveing Object Value
-/// 
+///
 /// ```ignore
 /// struct InspectResponse {
 ///     // Not a Vector.

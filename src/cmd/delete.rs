@@ -1,11 +1,11 @@
 use crate::command::{self, delete_error::Error};
-use crate::delete::Delete;
-use crate::utils;
-use crate::user;
 use crate::container;
+use crate::delete::Delete;
+use crate::user;
+use crate::utils;
 
-use std::{path, fs};
-use nix::mount::{mount, umount2, MsFlags, MntFlags};
+use nix::mount::{mount, umount2, MntFlags, MsFlags};
+use std::{fs, path};
 
 pub struct DeleteStruct;
 
@@ -15,17 +15,22 @@ impl Delete for DeleteStruct {
         let injesh_container_name = delete.name();
 
         // ~/.injesh/containers/<injesh_container_name>
-        let container_dir_path = format!("{}/{}", user::User::new()?.containers(), injesh_container_name);
+        let container_dir_path = format!(
+            "{}/{}",
+            user::User::new()?.containers(),
+            injesh_container_name
+        );
         let container_dir_path = path::Path::new(&container_dir_path);
-        
+
         // ensure container is exists
         ensure_container_exists(container_dir_path)?;
         let overlayfs_dirs = container::Container::new(injesh_container_name)?;
-        
+
         // umount merged directory
         // as syscall: umount2("/path/to/dest", 0)
-        umount2(overlayfs_dirs.mergeddir(), MntFlags::empty()).map_err(|why| Error::UnmountFailed(why))?;
-        
+        umount2(overlayfs_dirs.mergeddir(), MntFlags::empty())
+            .map_err(|why| Error::UnmountFailed(why))?;
+
         // restore original upperdir
         overwrite_target_upperdir_by_own_upperdir(container_dir_path, &overlayfs_dirs)?;
 
@@ -48,7 +53,9 @@ impl DeleteStruct {
     }
 }
 
-fn ensure_container_exists(container_dir_path: &path::Path) -> Result<(), Box<dyn std::error::Error>> {
+fn ensure_container_exists(
+    container_dir_path: &path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     if !container_dir_path.exists() {
         Err(Error::ContainerNotFound)?
     }
@@ -56,7 +63,10 @@ fn ensure_container_exists(container_dir_path: &path::Path) -> Result<(), Box<dy
     Ok(())
 }
 
-fn overwrite_target_upperdir_by_own_upperdir(container_dir_path: &path::Path, overlayfs_dirs: &container::Container) -> Result<(), Box<dyn std::error::Error>> {
+fn overwrite_target_upperdir_by_own_upperdir(
+    container_dir_path: &path::Path,
+    overlayfs_dirs: &container::Container,
+) -> Result<(), Box<dyn std::error::Error>> {
     let target_upperdir = overlayfs_dirs.upperdir();
     let own_upperdir = container_dir_path.join("upperdir");
 
@@ -65,11 +75,41 @@ fn overwrite_target_upperdir_by_own_upperdir(container_dir_path: &path::Path, ov
     Ok(())
 }
 
-fn mount_merged_directory(overlayfs_dirs: &container::Container) -> Result<(), Box<dyn std::error::Error>> {
-    let lowerdir_string = overlayfs_dirs.lowerdir().clone().into_os_string().into_string().map_err(|_| Error::OvarlayfsDirInvalid)?;
-    let upperdir_string = overlayfs_dirs.upperdir().clone().into_os_string().into_string().map_err(|_| Error::OvarlayfsDirInvalid)?;
-    let workdir_string = overlayfs_dirs.workdir().clone().into_os_string().into_string().map_err(|_| Error::OvarlayfsDirInvalid)?;
-    mount(Some("overlay"), overlayfs_dirs.mergeddir(), Some("overlay"), MsFlags::empty(), Some(format!("lowerdir={},upperdir={},workdir={}", lowerdir_string, upperdir_string, workdir_string).as_str())).map_err(|why| Error::MountFailed(why))?;
+fn mount_merged_directory(
+    overlayfs_dirs: &container::Container,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let lowerdir_string = overlayfs_dirs
+        .lowerdir()
+        .clone()
+        .into_os_string()
+        .into_string()
+        .map_err(|_| Error::OvarlayfsDirInvalid)?;
+    let upperdir_string = overlayfs_dirs
+        .upperdir()
+        .clone()
+        .into_os_string()
+        .into_string()
+        .map_err(|_| Error::OvarlayfsDirInvalid)?;
+    let workdir_string = overlayfs_dirs
+        .workdir()
+        .clone()
+        .into_os_string()
+        .into_string()
+        .map_err(|_| Error::OvarlayfsDirInvalid)?;
+    mount(
+        Some("overlay"),
+        overlayfs_dirs.mergeddir(),
+        Some("overlay"),
+        MsFlags::empty(),
+        Some(
+            format!(
+                "lowerdir={},upperdir={},workdir={}",
+                lowerdir_string, upperdir_string, workdir_string
+            )
+            .as_str(),
+        ),
+    )
+    .map_err(|why| Error::MountFailed(why))?;
 
     Ok(())
 }
