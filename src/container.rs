@@ -100,7 +100,7 @@ impl Container {
         };
 
         // println!("------------");
-        let docker_info: DockerInspectApiResponse = serde_json::from_value(request_docker_api(
+        let docker_info: DockerInspectApiResponse = serde_json::from_str(&request_docker_api(
             "GET",
             &format!("/containers/{id}/json", id = id),
             None,
@@ -137,7 +137,7 @@ impl Container {
     pub fn convert_name_to_id(name: &str) -> Result<String, Box<dyn std::error::Error>> {
         // as commandline:
         // curl --unix-socket /var/run/docker.sock -X GET "http://localhost/containers/json?all=true&filters=$( python3 -c 'import urllib.parse; print( urllib.parse.quote("""{"name": ["beautiful_curran"]}""") )' )"
-        let docker_info: DockerListApiResponse = serde_json::from_value(request_docker_api(
+        let docker_info: DockerListApiResponse = serde_json::from_str(&request_docker_api(
             "GET",
             "/containers/json",
             Some(&format!(r#"all=true&filters={{"name": ["{}"]}}"#, name)),
@@ -208,22 +208,31 @@ fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::
     Ok(request_path)
 }
 
-/// Hitting Docker API Interface.
+/// Hitting Docker API Interface.  
 /// See API reference: https://docs.docker.com/engine/api/latest/
+/// 
 /// # Params:
+/// 
 /// - method: GET, POST, etc
 /// - path: "/containers/json", etc
 /// - parameter: Some("filters={"name":"hoge"}"), None, etc
+/// 
 /// # response:
-/// type: serde_json::Value
+/// 
+/// type: String  
 /// receiving json format:
+/// 
 /// ```ignore
 /// {"containers": {API response body}}
 /// ```
-/// So, We must receive values using `containers` key.
-/// Deserializing by `serde_json::from_value()` is useful.
+/// 
+/// So, We must receive values using `containers` key.  
+/// Deserializing by `serde_json::from_str()` is useful.
+/// 
 /// # Example:
+/// 
 /// Receiveing Array Value
+/// 
 /// ```ignore
 /// struct ListResponse {
 ///     // Vector.
@@ -232,9 +241,11 @@ fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::
 ///
 /// ... snip ...
 ///
-/// let docker_info: ListResponse = serde_json::from_value(request_docker_api("GET", "/containers/json", Some(&format!(r#"all=true&filters={{"name": ["{}"]}}"#, name)))?)?;
+/// let docker_info: ListResponse = serde_json::from_str(&request_docker_api("GET", "/containers/json", Some(&format!(r#"all=true&filters={{"name": ["{}"]}}"#, name)))?)?;
 /// ```
+/// 
 /// Receiveing Object Value
+/// 
 /// ```ignore
 /// struct InspectResponse {
 ///     // Not a Vector.
@@ -243,13 +254,13 @@ fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::
 ///
 /// ... snip ...
 ///
-/// let docker_info: InspectResponse = serde_json::from_value(request_docker_api("GET", &format!("/containers/{id}/json", id = id), None)?)?;
+/// let docker_info: InspectResponse = serde_json::from_str(&request_docker_api("GET", &format!("/containers/{id}/json", id = id), None)?)?;
 /// ```
 fn request_docker_api(
     method: &str,
     path: &str,
     parameter: Option<&str>,
-) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+) -> Result<String, Box<dyn std::error::Error>> {
     let docker_sock = std::path::Path::new("/var/run/docker.sock");
 
     // Generate request body
@@ -305,9 +316,8 @@ fn request_docker_api(
     // wrap with a brath
     // println!("res: ```{}```", response);
     let response = format!(r#"{{"containers":{response}}}"#, response = response);
-    let res: serde_json::Value = serde_json::from_str(&response)?;
 
-    Ok(res)
+    Ok(response)
 }
 
 fn catch_error_message(response: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
