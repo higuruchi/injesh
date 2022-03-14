@@ -49,7 +49,7 @@ where
             },
             SubCommand::Delete(delete_args) => match self.delete.delete(delete_args) {
                 Ok(_) => {}
-                Err(e) => println!("execute delete command error: {:?}", e),
+                Err(e) => println!("execute delete command error: {}", e),
             },
             SubCommand::Exec(exec_args) => match self.exec.exec(exec_args) {
                 Ok(_) => {}
