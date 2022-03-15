@@ -2,13 +2,12 @@
 name = "injesh"
 version = "0.1.0"
 edition = "2021"
+authors = ["higuruchi <hfumiya2324@gmail.com>", "yassi-github <s19t312@kagawa-u.ac.jp>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-rt = "2.6.0"
-awc = "2.0.3"
-clap = "3.0.14"
+clap = { version = "3.0.14", features = ["derive"] }
 form_urlencoded = "1.0.1"
 futures = "0.3.21"
 serde = { version = "1.0.136", features = ["derive"] }
