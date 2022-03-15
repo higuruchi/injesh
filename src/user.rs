@@ -39,9 +39,7 @@ impl User {
             "x86_64" => "amd64",
             "aarch64" => "arm64",
             "armv7l" => "armhf",
-            _ => {
-                Err(Error::UnsupportedArchitecture)?
-            }
+            _ => Err(Error::UnsupportedArchitecture)?,
         };
 
         Ok(User {
