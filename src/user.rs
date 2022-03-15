@@ -39,7 +39,8 @@ impl User {
             "aarch64" => "arm64",
             "armv7l" => "armhf",
             _ => Err(Error::UnsupportedArchitecture)?,
-        }.to_string();
+        }
+        .to_string();
 
         Ok(User {
             injesh_home: format!("{}", &injesh_homedir),
