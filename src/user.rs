@@ -5,17 +5,20 @@ pub struct User {
     injesh_home: String,
     images: String,
     containers: String,
+    architecture: String,
 }
 
 #[derive(Debug)]
 pub enum Error {
     HomeNotFound,
+    UnsupportedArchitecture,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::HomeNotFound => write!(f, "Home not found!"),
+            Error::UnsupportedArchitecture => write!(f, "cpu architecture unsupported"),
         }
     }
 }
@@ -29,10 +32,23 @@ impl User {
             Err(_) => return Err(Error::HomeNotFound)?,
         };
 
+        let uname_machine = nix::sys::utsname::uname();
+        // let uname_machine = uname_machine.machine();
+        // TODO: add more architectures
+        let architecture = match uname_machine.machine() {
+            "x86_64" => "amd64",
+            "aarch64" => "arm64",
+            "armv7l" => "armhf",
+            _ => {
+                Err(Error::UnsupportedArchitecture)?
+            }
+        };
+
         Ok(User {
             injesh_home: format!("{}", &injesh_homedir),
             images: format!("{}/images", &injesh_homedir),
             containers: format!("{}/containers", &injesh_homedir),
+            architecture: format!("{}", architecture),
         })
     }
 
@@ -44,6 +60,9 @@ impl User {
     }
     pub fn containers(&self) -> &str {
         &self.containers
+    }
+    pub fn architecture(&self) -> &str {
+        &self.architecture
     }
 }
 
@@ -66,5 +85,10 @@ mod tests {
             userinfo.unwrap().containers(),
             "/home/runner/.injesh/containers"
         );
+    }
+    #[test]
+    fn test_user_architecture() {
+        let userinfo = User::new();
+        assert_eq!(userinfo.unwrap().architecture(), "amd64");
     }
 }
