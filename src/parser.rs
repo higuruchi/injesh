@@ -2,43 +2,28 @@ use crate::command::{
     self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand,
 };
 use crate::{image, image_downloader, image_downloader_lxd, user};
-use clap::{Parser, Subcommand, Args};
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
-pub fn parse() -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
+pub fn parse() -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>>
+{
     let args: Cli = Cli::parse();
     match args.action {
-        Action::Delete(delete) => {
-            Ok(SubCommand::Delete(initialize_delete(delete)?))
-        }
-        Action::Exec(exec) => {
-            Ok(SubCommand::Exec(initialize_exec(exec)?))
-        }
-        Action::File(file) => {
-            Ok(SubCommand::File(match file.action {
-                FileAction::Pull(pull) => {
-                    FileSubCommand::Pull(initialize_file_pull(pull)?)
-                }
-                FileAction::Push(push) => {
-                    FileSubCommand::Push(initialize_file_push(push)?)
-                }
-            }))
-        }
-        Action::Init => {
-            Ok(SubCommand::Init(initialize_init()?))
-        }
-        Action::Launch(launch) => {
-            Ok(SubCommand::Launch(initialize_launch(launch)?))
-        }
-        Action::List => {
-            Ok(SubCommand::List(initialize_list()?))
-        }
+        Action::Delete(delete) => Ok(SubCommand::Delete(initialize_delete(delete)?)),
+        Action::Exec(exec) => Ok(SubCommand::Exec(initialize_exec(exec)?)),
+        Action::File(file) => Ok(SubCommand::File(match file.action {
+            FileAction::Pull(pull) => FileSubCommand::Pull(initialize_file_pull(pull)?),
+            FileAction::Push(push) => FileSubCommand::Push(initialize_file_push(push)?),
+        })),
+        Action::Init => Ok(SubCommand::Init(initialize_init()?)),
+        Action::Launch(launch) => Ok(SubCommand::Launch(initialize_launch(launch)?)),
+        Action::List => Ok(SubCommand::List(initialize_list()?)),
     }
 }
 
 fn initialize_delete(delete: DeleteArgs) -> Result<Delete, Box<dyn std::error::Error>> {
-            use command::delete_error::Error;
-            Ok(Delete::new(delete.name))
+    use command::delete_error::Error;
+    Ok(Delete::new(delete.name))
 }
 
 fn initialize_exec(exec: ExecArgs) -> Result<Exec, Box<dyn std::error::Error>> {
@@ -70,7 +55,9 @@ fn initialize_init() -> Result<Init, Box<dyn std::error::Error>> {
     Ok(Init::new()?)
 }
 
-fn initialize_launch(launch: LaunchArgs) -> Result<Launch<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
+fn initialize_launch(
+    launch: LaunchArgs,
+) -> Result<Launch<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
     use command::launch_error::Error;
 
     let rootfs = check_rootfs(
@@ -79,7 +66,7 @@ fn initialize_launch(launch: LaunchArgs) -> Result<Launch<impl image_downloader:
         launch.opt_rootfs_docker.as_ref().map(|r| r.as_str()),
         launch.opt_rootfs_lxd.as_ref().map(|r| r.as_str()),
     )?;
-    
+
     Ok(Launch::new(
         String::from(launch.container_id_or_name),
         rootfs,
@@ -112,7 +99,9 @@ fn check_rootfs(
 
         // distribution/version format validation
         // e.g. busybox/1.34.1
-        let distri_and_version = arg_rootfs_image.split_once("/").unwrap_or(Err(crate::image::Error::ImageSyntaxError)?);
+        let distri_and_version = arg_rootfs_image
+            .split_once("/")
+            .unwrap_or(Err(crate::image::Error::ImageSyntaxError)?);
         if distri_and_version.0.len() == 0 || distri_and_version.1.len() == 0 {
             Err(crate::image::Error::ImageSyntaxError)?
         }
@@ -143,18 +132,23 @@ fn check_rootfs(
 
 // injesh file pull container_name:/path/to/src /path/to/dest
 //                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ separate container_name and path
-fn parse_container_path(name_colon_path_arg: &str) -> Result<(&str, &str), Box<dyn std::error::Error>> {
+fn parse_container_path(
+    name_colon_path_arg: &str,
+) -> Result<(&str, &str), Box<dyn std::error::Error>> {
     // TODO: エラー型を精査する
     if !name_colon_path_arg.contains(':') {
         Err(crate::command::file_error::Error::FromParseError)?
     }
-    
-    let name_and_path = name_colon_path_arg.split_once(':').ok_or(crate::command::file_error::Error::FromParseError)?;
+
+    let name_and_path = name_colon_path_arg
+        .split_once(':')
+        .ok_or(crate::command::file_error::Error::FromParseError)?;
 
     Ok(name_and_path)
 }
 
-const ABOUT_THIS_APP: &str = "Applications for debugging into containers without shells such as distroless and scratch. 
+const ABOUT_THIS_APP: &str =
+    "Applications for debugging into containers without shells such as distroless and scratch. 
 It is possible to enter a container by sharing namespaces \
 such as cgroup, ipc, net, pid, user, uts, etc. with the container to be debugged. 
 File operations performed in the debugging container do not affect the original container.";
@@ -170,7 +164,8 @@ const DELETE_ABOUT: &str = "Remove the debug container";
 const LIST_ABOUT: &str = "List debug containers";
 const FILE_ABOUT: &str = "File operations in the debug container";
 const FILE_PULL_ABOUT: &str = "Download the specified file of the debug container.";
-const FILE_PUSH_ABOUT: &str = "Uploading the specified file of the host to the specified PATH of the debug container";
+const FILE_PUSH_ABOUT: &str =
+    "Uploading the specified file of the host to the specified PATH of the debug container";
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
