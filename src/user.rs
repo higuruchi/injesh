@@ -32,21 +32,20 @@ impl User {
             Err(_) => return Err(Error::HomeNotFound)?,
         };
 
-        let uname_machine = nix::sys::utsname::uname();
-        // let uname_machine = uname_machine.machine();
+        let uname = nix::sys::utsname::uname();
         // TODO: add more architectures
-        let architecture = match uname_machine.machine() {
+        let architecture = match uname.machine() {
             "x86_64" => "amd64",
             "aarch64" => "arm64",
             "armv7l" => "armhf",
             _ => Err(Error::UnsupportedArchitecture)?,
-        };
+        }.to_string();
 
         Ok(User {
             injesh_home: format!("{}", &injesh_homedir),
             images: format!("{}/images", &injesh_homedir),
             containers: format!("{}/containers", &injesh_homedir),
-            architecture: format!("{}", architecture),
+            architecture,
         })
     }
 
