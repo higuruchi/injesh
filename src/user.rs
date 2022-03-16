@@ -5,7 +5,14 @@ pub struct User {
     injesh_home: String,
     images: String,
     containers: String,
-    architecture: String,
+    architecture: CpuArchitecture,
+}
+
+#[derive(Debug)]
+pub enum CpuArchitecture {
+    Aarch64,
+    Amd64,
+    Armhf,
 }
 
 #[derive(Debug)]
@@ -35,12 +42,11 @@ impl User {
         let uname = nix::sys::utsname::uname();
         // TODO: add more architectures
         let architecture = match uname.machine() {
-            "x86_64" => "amd64",
-            "aarch64" => "arm64",
-            "armv7l" => "armhf",
+            "x86_64" => CpuArchitecture::Amd64,
+            "aarch64" => CpuArchitecture::Aarch64,
+            "armv7l" => CpuArchitecture::Armhf,
             _ => Err(Error::UnsupportedArchitecture)?,
-        }
-        .to_string();
+        };
 
         Ok(User {
             injesh_home: format!("{}", &injesh_homedir),
@@ -59,7 +65,7 @@ impl User {
     pub fn containers(&self) -> &str {
         &self.containers
     }
-    pub fn architecture(&self) -> &str {
+    pub fn architecture(&self) -> &CpuArchitecture {
         &self.architecture
     }
 }
