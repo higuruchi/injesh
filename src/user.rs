@@ -15,6 +15,16 @@ pub enum CpuArchitecture {
     Armhf,
 }
 
+impl fmt::Display for CpuArchitecture {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CpuArchitecture::Aarch64 => write!(f, "aarch64"),
+            CpuArchitecture::Amd64 => write!(f, "amd64"),
+            CpuArchitecture::Armhf => write!(f, "armhf"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Error {
     HomeNotFound,
@@ -94,5 +104,10 @@ mod tests {
     fn test_user_architecture() {
         let userinfo = User::new();
         assert_eq!(userinfo.unwrap().architecture(), &CpuArchitecture::Amd64);
+    }
+    #[test]
+    fn test_user_architecture_display() {
+        let userinfo = User::new();
+        assert_eq!(format!("{}", userinfo.unwrap().architecture()), "amd64");
     }
 }
