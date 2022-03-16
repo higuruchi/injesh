@@ -8,7 +8,7 @@ pub struct User {
     architecture: CpuArchitecture,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum CpuArchitecture {
     Aarch64,
     Amd64,
