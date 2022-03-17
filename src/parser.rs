@@ -1,7 +1,7 @@
 use crate::command::{
     self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand,
 };
-use crate::{image, image_downloader, image_downloader_lxd, user};
+use crate::{image, image_downloader, image_downloader_lxd, user, container};
 use clap::{App, Arg};
 use regex::Regex;
 use std::path::PathBuf;
@@ -150,11 +150,11 @@ If CMD is not specified, the default shell is used.";
             )?;
 
             Ok(SubCommand::Launch(Launch::new(
-                String::from(container),
+                container::Container::new(container)?,
                 rootfs,
                 String::from(name),
                 cmd,
-            )))
+            )?))
         }
         Some((EXEC, sub_m)) => {
             use command::exec_error::Error;
