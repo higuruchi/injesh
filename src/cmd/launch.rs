@@ -221,7 +221,7 @@ fn remount<DO: Downloader>(launch: &command::Launch<DO>) -> Result<(), Box<dyn s
     Ok(())
 }
 
-/// プロセスのnamespace不ァイルディスクリプタを管理する構造体
+/// プロセスのnamespaceファイルディスクリプタを管理する構造体
 struct Ns {
     net: File,
     cgroup: File,
