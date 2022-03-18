@@ -172,12 +172,29 @@ pub mod delete_error {
     #[derive(Debug)]
     pub enum Error {
         NameNotFound,
+        ContainerNotFound,
+        MountFailed(nix::errno::Errno),
+        UnmountFailed(nix::errno::Errno),
+        CopyFailed(std::io::Error),
+        OvarlayfsDirInvalid,
+        RemoveFailed(std::io::Error),
     }
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
                 Error::NameNotFound => write!(f, "Name not found"),
+                Error::ContainerNotFound => write!(f, "container not found"),
+                Error::MountFailed(errno) | Error::UnmountFailed(errno) => {
+                    let reason = match errno {
+                        nix::errno::Errno::EPERM => "Operation not permitted".to_string(),
+                        _ => format!("unknown error({})", errno.to_string()),
+                    };
+                    write!(f, "mount/umount failed: {}.", reason)
+                }
+                Error::CopyFailed(err) => write!(f, "copy failed: {}.", err),
+                Error::OvarlayfsDirInvalid => write!(f, "ovarlayfs dir invalid"),
+                Error::RemoveFailed(err) => write!(f, "remove failed: {}.", err),
             }
         }
     }
@@ -275,7 +292,7 @@ where
     pub fn cmd(&self) -> Option<&str> {
         match &self.cmd {
             Some(cmd) => Some(&cmd),
-            None => None
+            None => None,
         }
     }
 }
@@ -304,6 +321,9 @@ impl Exec {
 impl Delete {
     pub fn new(name: String) -> Delete {
         Delete { name: name }
+    }
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 
