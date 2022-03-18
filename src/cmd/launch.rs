@@ -62,7 +62,6 @@ where
     /// 取得したデバック対象コンテナプロセスIDをもとにsetnsをし、名前空間を同一にする
     /// 与えられた初期実行ファイルをexecする
     fn launch(&self, launch: &command::Launch<DO>) -> Result<(), Box<dyn std::error::Error>> {
-
         // injeshコマンドが初期化されてるかどうかチェック
         utils::check_initialized()?;
 
@@ -73,7 +72,6 @@ where
         remount(launch)?;
 
         // TODO: デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
-        
 
         // デバック対象コンテナのプロセスIDとネームスペースのファイルディスクリプタを取得
         let container_pid = launch.target_container().pid();
@@ -104,7 +102,7 @@ where
                     // execでプログラムを実行
                     let cmd = match launch.cmd() {
                         Some(cmd) => cmd,
-                        None => "/bin/bash"
+                        None => "/bin/bash",
                     };
                     println!("cmd{:?}", cmd);
                     execv(&CString::new(cmd)?, &vec)?;
@@ -126,13 +124,18 @@ impl LaunchStruct {
     }
 }
 
-fn initialize_setting<DO: Downloader>(launch: &command::Launch<DO>)
--> Result<(), Box<dyn std::error::Error>> {
+fn initialize_setting<DO: Downloader>(
+    launch: &command::Launch<DO>,
+) -> Result<(), Box<dyn std::error::Error>> {
     // rootfsの種類などが記載された設定ファイルsetting.yamlを~/.injesh/containers/に作成する
     match Path::new(&format!("{}/{}", launch.user().containers(), launch.name())).exists() {
         true => return Err(Error::AlreadyExists)?,
         false => {
-            fs::create_dir_all(format!("{}/{}/upper", launch.user().containers(), launch.name()))?;
+            fs::create_dir_all(format!(
+                "{}/{}/upper",
+                launch.user().containers(),
+                launch.name()
+            ))?;
             let mut setting_file = fs::File::create(format!(
                 "{}/{}/setting.yaml",
                 launch.user().containers(),
@@ -150,12 +153,20 @@ fn initialize_setting<DO: Downloader>(launch: &command::Launch<DO>)
         let file_name = match path.file_name() {
             Some(file_name_os_str) => match file_name_os_str.to_str() {
                 Some(file_name_str) => file_name_str,
-                None => continue
+                None => continue,
             },
-            None => continue
+            None => continue,
         };
 
-        fs::copy(&path, format!("{}/{}/upper/{}", launch.user().containers(), launch.name(), file_name))?;
+        fs::copy(
+            &path,
+            format!(
+                "{}/{}/upper/{}",
+                launch.user().containers(),
+                launch.name(),
+                file_name
+            ),
+        )?;
     }
 
     Ok(())

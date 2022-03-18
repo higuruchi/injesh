@@ -275,7 +275,7 @@ where
     pub fn cmd(&self) -> Option<&str> {
         match &self.cmd {
             Some(cmd) => Some(&cmd),
-            None => None
+            None => None,
         }
     }
 }
