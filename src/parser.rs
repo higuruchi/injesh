@@ -101,6 +101,7 @@ fn check_rootfs(
             None => return Err(crate::image::Error::ImageSyntaxError)?,
         };
 
+
         if distri_and_version.0.len() == 0 || distri_and_version.1.len() == 0 {
             Err(crate::image::Error::ImageSyntaxError)?
         }
