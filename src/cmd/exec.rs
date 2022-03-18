@@ -1,15 +1,15 @@
 use crate::command::{self, exec_error::Error};
-use crate::exec::Exec;
 use crate::container;
+use crate::exec::Exec;
 use crate::user;
 
+use nix::sched::{setns, CloneFlags};
+use nix::unistd::fchdir;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::process::CommandExt;
 use std::path;
 use std::process;
-use nix::sched::{setns, CloneFlags};
-use nix::unistd::fchdir;
 
 pub struct ExecStruct;
 
@@ -42,7 +42,6 @@ impl FdFiles {
     }
 }
 
-
 impl Exec for ExecStruct {
     fn exec(&self, exec: &command::Exec) -> Result<(), Box<dyn std::error::Error>> {
         // 1. check if container exists
@@ -54,10 +53,10 @@ impl Exec for ExecStruct {
         //     - injesh
         // let injesh_container_name = exec.name();
         // check_injesh_container_exists(injesh_container_name)?;
-        
+
         // 2. get params for setns
         // (got at exec_closure_impl)
-        
+
         // 3. mk exec closure(will be called as child process)
         let exec_closure = || -> isize {
             exec_closure_impl(target_pid, exec).unwrap_or_else(|err| {
@@ -77,7 +76,9 @@ impl Exec for ExecStruct {
     }
 }
 
-fn check_docker_container_exists(container_name_or_id: &str) -> Result<bool, Box<dyn std::error::Error>> {
+fn check_docker_container_exists(
+    container_name_or_id: &str,
+) -> Result<bool, Box<dyn std::error::Error>> {
     // TODO: get docker name or id
     // let docker_name_or_id;
     // container::Container::new(docker_name_or_id)?;
@@ -95,7 +96,10 @@ fn check_injesh_container_exists(container_name: &str) -> Result<bool, Box<dyn s
     }
 }
 
-fn exec_closure_impl(target_container_pid: u32, exec: &command::Exec) -> Result<isize, Box<dyn std::error::Error>> {
+fn exec_closure_impl(
+    target_container_pid: u32,
+    exec: &command::Exec,
+) -> Result<isize, Box<dyn std::error::Error>> {
     // 2. get params for setns
     //     - fd(from pid)
     let fd_files = FdFiles::new(target_container_pid)?;
@@ -103,7 +107,7 @@ fn exec_closure_impl(target_container_pid: u32, exec: &command::Exec) -> Result<
     // let mergeddir_path = &target_container_info.mergeddir();
     // ** debug **
     let mergeddir_path = &path::Path::new("/var/lib/docker/overlay2/8a07b0e31c72380ed6993dd4c747909cfdc58862c93b0e1d69dd5d8d2899c2d9/merged").to_path_buf();
-    
+
     // save mergeddir path before changing root by setns
     let mergeddir = File::open(mergeddir_path)?;
 
@@ -115,7 +119,7 @@ fn exec_closure_impl(target_container_pid: u32, exec: &command::Exec) -> Result<
     setns(fd_files.net.as_raw_fd(), CloneFlags::CLONE_NEWNET)?;
     setns(fd_files.pid.as_raw_fd(), CloneFlags::CLONE_NEWPID)?;
     setns(fd_files.mnt.as_raw_fd(), CloneFlags::CLONE_NEWNS)?;
-    
+
     //     2. chroot, chdir
     // chroot: path not found
     // chroot(mergeddir_path)?;
@@ -146,7 +150,7 @@ fn split_cmd(cmd: Vec<&str>) -> Result<(&str, Option<Vec<&str>>), Box<dyn std::e
         Ok((DEFAULT_CMD, None))
     } else {
         // If cmd has string,
-        // attempt to split it to primary command and args as str type 
+        // attempt to split it to primary command and args as str type
         // and if white space isn't found, None is bound to.
         // e.g.
         // "echo hello world" -> Some("echo", "hello world")
