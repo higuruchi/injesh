@@ -5,17 +5,37 @@ pub struct User {
     injesh_home: String,
     images: String,
     containers: String,
+    architecture: CpuArchitecture,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CpuArchitecture {
+    Aarch64,
+    Amd64,
+    Armhf,
+}
+
+impl fmt::Display for CpuArchitecture {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CpuArchitecture::Aarch64 => write!(f, "aarch64"),
+            CpuArchitecture::Amd64 => write!(f, "amd64"),
+            CpuArchitecture::Armhf => write!(f, "armhf"),
+        }
+    }
 }
 
 #[derive(Debug)]
 pub enum Error {
     HomeNotFound,
+    UnsupportedArchitecture,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::HomeNotFound => write!(f, "Home not found!"),
+            Error::UnsupportedArchitecture => write!(f, "cpu architecture unsupported"),
         }
     }
 }
@@ -29,10 +49,20 @@ impl User {
             Err(_) => return Err(Error::HomeNotFound)?,
         };
 
+        let uname = nix::sys::utsname::uname();
+        // TODO: add more architectures
+        let architecture = match uname.machine() {
+            "x86_64" => CpuArchitecture::Amd64,
+            "aarch64" => CpuArchitecture::Aarch64,
+            "armv7l" => CpuArchitecture::Armhf,
+            _ => Err(Error::UnsupportedArchitecture)?,
+        };
+
         Ok(User {
             injesh_home: format!("{}", &injesh_homedir),
             images: format!("{}/images", &injesh_homedir),
             containers: format!("{}/containers", &injesh_homedir),
+            architecture,
         })
     }
 
@@ -44,6 +74,9 @@ impl User {
     }
     pub fn containers(&self) -> &str {
         &self.containers
+    }
+    pub fn architecture(&self) -> &CpuArchitecture {
+        &self.architecture
     }
 }
 
@@ -66,5 +99,15 @@ mod tests {
             userinfo.unwrap().containers(),
             "/home/runner/.injesh/containers"
         );
+    }
+    #[test]
+    fn test_user_architecture() {
+        let userinfo = User::new();
+        assert_eq!(userinfo.unwrap().architecture(), &CpuArchitecture::Amd64);
+    }
+    #[test]
+    fn test_user_architecture_display() {
+        let userinfo = User::new();
+        assert_eq!(format!("{}", userinfo.unwrap().architecture()), "amd64");
     }
 }

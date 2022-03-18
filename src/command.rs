@@ -1,4 +1,4 @@
-use crate::{image, image_downloader, user};
+use crate::{container, image, image_downloader, user};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -86,10 +86,11 @@ pub struct Launch<D>
 where
     D: image_downloader::Downloader,
 {
-    target_container: String,
+    target_container: container::Container,
     rootfs_option: RootFSOption<D>,
     name: String,
     cmd: Option<String>,
+    user: user::User,
 }
 
 #[derive(Debug)]
@@ -239,16 +240,42 @@ where
     D: image_downloader::Downloader,
 {
     pub fn new(
-        target_container: String,
+        target_container: container::Container,
         rootfs_option: RootFSOption<D>,
         name: String,
         cmd: Option<String>,
-    ) -> Launch<D> {
-        Launch {
+    ) -> Result<Launch<D>, Box<dyn std::error::Error>> {
+        let user = user::User::new()?;
+
+        Ok(Launch {
             target_container: target_container,
             rootfs_option: rootfs_option,
             name: name,
             cmd: cmd,
+            user: user,
+        })
+    }
+
+    pub fn user(&self) -> &user::User {
+        &self.user
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn target_container(&self) -> &container::Container {
+        &self.target_container
+    }
+
+    pub fn rootfs_option(&self) -> &RootFSOption<D> {
+        &self.rootfs_option
+    }
+
+    pub fn cmd(&self) -> Option<&str> {
+        match &self.cmd {
+            Some(cmd) => Some(&cmd),
+            None => None
         }
     }
 }
