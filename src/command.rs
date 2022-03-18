@@ -59,7 +59,7 @@ pub mod init_error {
 #[derive(Debug)]
 pub struct Exec {
     name: String,
-    cmd: Option<String>,
+    cmd: Vec<String>,
 }
 
 pub mod exec_error {
@@ -68,12 +68,14 @@ pub mod exec_error {
     #[derive(Debug)]
     pub enum Error {
         NameNotFound,
+        DockerProcessNotExists,
     }
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
                 Error::NameNotFound => write!(f, "Name not Found"),
+                Error::DockerProcessNotExists => write!(f, "docker process not exists"),
             }
         }
     }
@@ -266,11 +268,17 @@ impl List {
 }
 
 impl Exec {
-    pub fn new(name: String, cmd: Option<String>) -> Exec {
+    pub fn new(name: String, cmd: Vec<String>) -> Exec {
         Exec {
             name: name,
             cmd: cmd,
         }
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn cmd(&self) -> Vec<&str> {
+        self.cmd.iter().map(|s| s.as_str()).collect()
     }
 }
 

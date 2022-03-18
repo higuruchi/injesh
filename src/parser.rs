@@ -217,8 +217,10 @@ pub struct DeleteArgs {
 pub struct ExecArgs {
     #[clap()]
     pub name: String,
-    #[clap()]
-    pub cmd: Option<String>,
+    #[clap(required = false)]
+    pub cmd: Vec<String>,
+    // Option<Vec<T>> type is meaningless for positional argument
+    // pub cmd: Option<Vec<String>>,
 }
 
 #[derive(Subcommand)]
