@@ -22,8 +22,8 @@ impl Delete for DeleteStruct {
         );
         let container_dir_path = path::Path::new(&container_dir_path);
 
-        // ensure container is exists
-        ensure_container_exists(container_dir_path)?;
+        // check container is exists
+        check_container_exists(container_dir_path)?;
         let overlayfs_dirs = container::Container::new(injesh_container_name)?;
 
         // umount merged directory
@@ -53,7 +53,7 @@ impl DeleteStruct {
     }
 }
 
-fn ensure_container_exists(
+fn check_container_exists(
     container_dir_path: &path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !container_dir_path.exists() {
