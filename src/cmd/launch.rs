@@ -98,10 +98,10 @@ where
                     ns.setns_mnt()?;
                     ns.setns_uts()?;
 
-                    let mut detail: Vec<CString> = Vec::new();
                     // execでプログラムを実行
 
                     let main = CString::new(launch.cmd().main())?;
+                    let mut detail: Vec<CString> = vec!(main.clone());
                     for d in launch.cmd().detail() {
                         let d_clone = d.clone();
                         detail.push(CString::new(d_clone)?);
