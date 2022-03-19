@@ -55,7 +55,7 @@ where
     DO: Downloader,
 {
     /// rootfsの種類などが記載された設定ファイルsetting.yamlを~/.injesh/containers/に作成する
-    /// /var/lib/docker/overlay2/<CONTAINER_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
+    /// /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
     /// デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
     /// デバック対象コンテナのプロセスIDを取得
     /// forkする
@@ -82,7 +82,7 @@ where
                 // 親プロセスの場合
                 Ok(ForkResult::Parent { child, .. }) => match waitpid(child, None) {
                     Ok(status) => println!("Child exited {:?}", status),
-                    Err(_) => return Err(Error::Waitpid)?,
+                    Err(_) => Err(Error::Waitpid)?,
                 },
                 // 子プロセス
                 Ok(ForkResult::Child) => {
@@ -98,14 +98,16 @@ where
                     ns.setns_mnt()?;
                     ns.setns_uts()?;
 
-                    let vec: Vec<CString> = Vec::new();
+                    let mut detail: Vec<CString> = Vec::new();
                     // execでプログラムを実行
-                    let cmd = match launch.cmd() {
-                        Some(cmd) => cmd,
-                        None => "/bin/bash",
-                    };
-                    println!("cmd{:?}", cmd);
-                    execv(&CString::new(cmd)?, &vec)?;
+
+                    let main = CString::new(launch.cmd().main())?;
+                    for d in launch.cmd().detail() {
+                        let d_clone = d.clone();
+                        detail.push(CString::new(d_clone)?);
+
+                    }
+                    execv(&main, &detail)?;
                 }
                 Err(_) => return Err(Error::Fork)?,
             }
@@ -146,7 +148,7 @@ fn initialize_setting<DO: Downloader>(
         }
     }
 
-    // /var/lib/docker/overlay2/<CONTAINER_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
+    // /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
     for entry in fs::read_dir(launch.target_container().upperdir())? {
         let dir = entry?;
         let path = dir.path();
@@ -176,19 +178,16 @@ fn remount<DO: Downloader>(launch: &command::Launch<DO>) -> Result<(), Box<dyn s
     let rootfs_path = match launch.rootfs_option() {
         RootFSOption::RootfsImage(image) => {
             match image.check_rootfs_newest() {
-                Ok(flg) => match flg {
-                    true => { /* do nothing */ }
-                    false => {
-                        image.download_image()?;
-                    }
+                Ok(is_newest) => if !is_newest {
+                    image.download_image()?;
                 },
                 Err(e) => {
-                    return Err(e)?;
+                    Err(e)?;
                 }
             }
             image.rootfs_path()
         }
-        _ => return Err(Error::NotImplemented)?,
+        _ => Err(Error::NotImplemented)?,
     };
     let lower_dir = launch
         .target_container()
@@ -245,14 +244,16 @@ struct Ns {
 
 impl Ns {
     fn new(container_pid: u32) -> Result<Ns, Box<dyn std::error::Error>> {
+        let ns_base_path = format!("/proc/{}/ns", container_pid);
+
         Ok(Ns {
-            net: File::open(format!("/proc/{}/ns/net", container_pid))?,
-            cgroup: File::open(format!("/proc/{}/ns/cgroup", container_pid))?,
-            ipc: File::open(format!("/proc/{}/ns/ipc", container_pid))?,
-            pid: File::open(format!("/proc/{}/ns/pid", container_pid))?,
-            user: File::open(format!("/proc/{}/ns/user", container_pid))?,
-            mnt: File::open(format!("/proc/{}/ns/mnt", container_pid))?,
-            uts: File::open(format!("/proc/{}/ns/uts", container_pid))?,
+            net: File::open(format!("{}/net", &ns_base_path))?,
+            cgroup: File::open(format!("{}/cgroup", &ns_base_path))?,
+            ipc: File::open(format!("{}/ipc", &ns_base_path))?,
+            pid: File::open(format!("{}/pid", &ns_base_path))?,
+            user: File::open(format!("{}/user", &ns_base_path))?,
+            mnt: File::open(format!("{}/mnt", &ns_base_path))?,
+            uts: File::open(format!("{}/uts", &ns_base_path))?,
         })
     }
 

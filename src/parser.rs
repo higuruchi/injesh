@@ -1,12 +1,12 @@
 use crate::command::{
-    self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand,
+    self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand, Command,
 };
 use crate::{container, image, image_downloader, image_downloader_lxd, user};
 use clap::{Args, Parser, Subcommand};
 use regex::Regex;
 use std::path::PathBuf;
 
-pub fn parse() -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>>
+pub fn parse<'a>() -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>>
 {
     let args: Cli = Cli::parse();
     match args.action {
@@ -56,7 +56,7 @@ fn initialize_init() -> Result<Init, Box<dyn std::error::Error>> {
     Ok(Init::new()?)
 }
 
-fn initialize_launch(
+fn initialize_launch<'a>(
     launch: LaunchArgs,
 ) -> Result<Launch<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
     use command::launch_error::Error;
@@ -69,7 +69,7 @@ fn initialize_launch(
     )?;
 
     let container = container::Container::new(&launch.container_id_or_name)?;
-    Launch::new(container, rootfs, String::from(launch.name), launch.cmd)
+    Ok(Launch::new(container, rootfs, String::from(launch.name), Command::new(launch.cmd))?)
 }
 
 fn initialize_list() -> Result<List, Box<dyn std::error::Error>> {
@@ -95,11 +95,12 @@ fn check_rootfs(
         let user = user::User::new()?;
 
         // distribution/version format validation
-        // e.g. busybox/1.34.1
+        // e.g. busybox/1.34.1 
         let distri_and_version = match arg_rootfs_image.split_once("/") {
-            Some(distri_and_version) => distri_and_version,
-            None => return Err(crate::image::Error::ImageSyntaxError)?,
+            Some(d) => d,
+            None => Err(crate::image::Error::ImageSyntaxError)?
         };
+            // .unwrap_or(Err(crate::image::Error::ImageSyntaxError)?);
 
         if distri_and_version.0.len() == 0 || distri_and_version.1.len() == 0 {
             Err(crate::image::Error::ImageSyntaxError)?
@@ -254,7 +255,7 @@ pub struct LaunchArgs {
     #[clap()]
     pub name: String,
     #[clap()]
-    pub cmd: Option<String>,
+    pub cmd: Vec<String>,
 }
 
 #[derive(Args)]

@@ -89,7 +89,7 @@ where
     target_container: container::Container,
     rootfs_option: RootFSOption<D>,
     name: String,
-    cmd: Option<String>,
+    cmd: Command,
     user: user::User,
 }
 
@@ -260,7 +260,7 @@ where
         target_container: container::Container,
         rootfs_option: RootFSOption<D>,
         name: String,
-        cmd: Option<String>,
+        cmd: Command,
     ) -> Result<Launch<D>, Box<dyn std::error::Error>> {
         let user = user::User::new()?;
 
@@ -289,11 +289,8 @@ where
         &self.rootfs_option
     }
 
-    pub fn cmd(&self) -> Option<&str> {
-        match &self.cmd {
-            Some(cmd) => Some(&cmd),
-            None => None,
-        }
+    pub fn cmd(&self) -> &Command {
+        &self.cmd
     }
 }
 
@@ -336,3 +333,60 @@ impl File {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct Command {
+    index: usize,
+    main: String,
+    detail: Vec<String>,
+}
+
+impl Command {
+    pub fn new(detail: Vec<String>) -> Command {
+        let mut d_iter = detail.iter();
+        let mut detail = Vec::new();
+        let main = match d_iter.next() {
+            Some(cmd) => cmd.to_string(),
+            None => "/bin/bash".to_string(),
+        };
+
+        for d in d_iter {
+            detail.push(d.to_string())
+        }
+
+        Command {
+            index: 0,
+            main: main,
+            detail: detail,
+
+        }
+    }
+
+    pub fn main(&self) -> &str {
+        &self.main
+    }
+
+    // pub fn detail_iter(&self) -> Vec<&str> {
+    //     let res: Vec<&str> = self.detail.iter().map(|d| &(*d)).collect::<Vec<&str>>();
+    //     res
+    // }
+
+    pub fn detail(&self) -> &Vec<String> {
+        &self.detail
+    }
+}
+
+// impl<'a> Iterator for &Command {
+//     type Item = &'a str;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+
+//         if self.index <= self.detail.len() {
+//             return None
+//         }
+    
+//         let index = self.index;
+//         self.index += 1;
+//         Some(&self.detail[index])
+//     }
+// }
