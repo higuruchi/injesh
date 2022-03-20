@@ -20,9 +20,7 @@ use std::os::unix::io::AsRawFd;
 pub enum Error {
     AlreadyExists,
     Umount,
-    UpperDirNotFound,
-    LowerDirNotFound,
-    WorkDirNotFound,
+    NonValidUnicode,
     InvalidRootFSPath,
     NotImplemented,
     Fork,
@@ -37,9 +35,7 @@ impl fmt::Display for Error {
         match self {
             AlreadyExists => write!(f, "Debug Container Already Exists"),
             Umount => write!(f, "umount error"),
-            UpperDirNotFound => write!(f, "upper dir not found"),
-            LowerDirNotFound => write!(f, "lower dir not found"),
-            WorkDirNotFound => write!(f, "workdir not found"),
+            NonValidUnicode => write!(f, "non valid unicode"),
             InvalidRootFSPath => write!(f, "invalid rootfs path"),
             NotImplemented => write!(f, "Not implemented"),
             Fork => write!(f, "failed fork"),
@@ -132,11 +128,11 @@ impl LaunchStruct {
 }
 
 /// デバックコンテナを起動するために必要なディレクトリ群を初期化
-/// 
+///
 /// - `~/.injesh/containers/<CONTAINER_NAME>/upper`
-/// 
+///
 ///     デバックコンテナ起動前の`/var/lib/docker/overlay2/<HASH_ID>/upper`を保存しておくためのディレクトリ
-/// 
+///
 /// - `~/.injesh/containers/<CONTAINER_NAME>/setting.yaml`
 ///
 ///     デバックコンテナの`rootfs`やデバックコンテナ作成後に実行するコマンドなどを保存する設定ファイル
@@ -229,17 +225,17 @@ fn remount<DO: Downloader>(launch: &command::Launch<DO>) -> Result<(), Box<dyn s
         .target_container()
         .lowerdir()
         .to_str()
-        .ok_or(Error::LowerDirNotFound)?;
+        .ok_or(Error::NonValidUnicode)?;
     let upper_dir = launch
         .target_container()
         .upperdir()
         .to_str()
-        .ok_or(Error::UpperDirNotFound)?;
+        .ok_or(Error::NonValidUnicode)?;
     let work_dir = launch
         .target_container()
         .workdir()
         .to_str()
-        .ok_or(Error::WorkDirNotFound)?;
+        .ok_or(Error::NonValidUnicode)?;
 
     // デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
     umount2(launch.target_container().mergeddir(), MntFlags::empty())
