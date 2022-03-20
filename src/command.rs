@@ -32,6 +32,7 @@ where
     File(FileSubCommand),
 }
 
+
 #[derive(Debug)]
 pub struct Init {
     user: user::User,
@@ -56,29 +57,16 @@ pub mod init_error {
     impl std::error::Error for Error {}
 }
 
-#[derive(Debug)]
-pub struct Exec {
-    name: String,
-    cmd: Option<String>,
-}
+impl Init {
+    pub fn new() -> Result<Init, Box<dyn std::error::Error>> {
+        let user = user::User::new()?;
 
-pub mod exec_error {
-    use std::fmt;
-
-    #[derive(Debug)]
-    pub enum Error {
-        NameNotFound,
+        Ok(Init { user: user })
     }
 
-    impl fmt::Display for Error {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match self {
-                Error::NameNotFound => write!(f, "Name not Found"),
-            }
-        }
+    pub fn user(&self) -> &user::User {
+        &self.user
     }
-
-    impl std::error::Error for Error {}
 }
 
 #[derive(Debug)]
@@ -90,7 +78,75 @@ where
     rootfs_option: RootFSOption<D>,
     name: String,
     cmd: Command,
-    user: user::User,
+}
+
+#[derive(Debug)]
+pub enum RootFSOption<D>
+where
+    D: image_downloader::Downloader,
+{
+    Rootfs(PathBuf),
+    RootfsImage(image::Image<D>),
+    RootfsDocker(String),
+    RootfsLxd(String),
+    None,
+}
+
+pub mod launch_error {
+    use std::fmt;
+
+    #[derive(Debug)]
+    pub enum Error {
+        ContainerIdOrNameNotFound,
+        NameNotFound,
+    }
+
+    impl fmt::Display for Error {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Error::ContainerIdOrNameNotFound => write!(f, "Container id or name not found"),
+                Error::NameNotFound => write!(f, "Name not found"),
+            }
+        }
+    }
+
+    impl std::error::Error for Error {}
+}
+
+impl<D> Launch<D>
+where
+    D: image_downloader::Downloader,
+{
+    pub fn new(
+        target_container: container::Container,
+        rootfs_option: RootFSOption<D>,
+        name: String,
+        cmd: Command,
+    ) -> Result<Launch<D>, Box<dyn std::error::Error>> {
+
+        Ok(Launch {
+            target_container: target_container,
+            rootfs_option: rootfs_option,
+            name: name,
+            cmd: cmd,
+        })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn target_container(&self) -> &container::Container {
+        &self.target_container
+    }
+
+    pub fn rootfs_option(&self) -> &RootFSOption<D> {
+        &self.rootfs_option
+    }
+
+    pub fn cmd(&self) -> &Command {
+        &self.cmd
+    }
 }
 
 #[derive(Debug)]
@@ -128,37 +184,50 @@ pub mod list_error {
     impl std::error::Error for Error {}
 }
 
-#[derive(Debug)]
-pub enum RootFSOption<D>
-where
-    D: image_downloader::Downloader,
-{
-    Rootfs(PathBuf),
-    RootfsImage(image::Image<D>),
-    RootfsDocker(String),
-    RootfsLxd(String),
-    None,
+impl List {
+    pub fn new() -> Result<List, Box<dyn std::error::Error>> {
+        let user_info = user::User::new()?;
+
+        Ok(List { user: user_info })
+    }
+
+    pub fn user(&self) -> &user::User {
+        &self.user
+    }
 }
 
-pub mod launch_error {
+#[derive(Debug)]
+pub struct Exec {
+    name: String,
+    cmd: Option<String>,
+}
+
+pub mod exec_error {
     use std::fmt;
 
     #[derive(Debug)]
     pub enum Error {
-        ContainerIdOrNameNotFound,
         NameNotFound,
     }
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
-                Error::ContainerIdOrNameNotFound => write!(f, "Container id or name not found"),
-                Error::NameNotFound => write!(f, "Name not found"),
+                Error::NameNotFound => write!(f, "Name not Found"),
             }
         }
     }
 
     impl std::error::Error for Error {}
+}
+
+impl Exec {
+    pub fn new(name: String, cmd: Option<String>) -> Exec {
+        Exec {
+            name: name,
+            cmd: cmd,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -202,6 +271,15 @@ pub mod delete_error {
     impl std::error::Error for Error {}
 }
 
+impl Delete {
+    pub fn new(name: String) -> Delete {
+        Delete { name: name }
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[derive(Debug)]
 pub enum FileSubCommand {
     Pull(File),
@@ -238,90 +316,6 @@ pub mod file_error {
     }
 
     impl std::error::Error for Error {}
-}
-
-impl Init {
-    pub fn new() -> Result<Init, Box<dyn std::error::Error>> {
-        let user = user::User::new()?;
-
-        Ok(Init { user: user })
-    }
-
-    pub fn user(&self) -> &user::User {
-        &self.user
-    }
-}
-
-impl<D> Launch<D>
-where
-    D: image_downloader::Downloader,
-{
-    pub fn new(
-        target_container: container::Container,
-        rootfs_option: RootFSOption<D>,
-        name: String,
-        cmd: Command,
-    ) -> Result<Launch<D>, Box<dyn std::error::Error>> {
-        let user = user::User::new()?;
-
-        Ok(Launch {
-            target_container: target_container,
-            rootfs_option: rootfs_option,
-            name: name,
-            cmd: cmd,
-            user: user,
-        })
-    }
-
-    pub fn user(&self) -> &user::User {
-        &self.user
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn target_container(&self) -> &container::Container {
-        &self.target_container
-    }
-
-    pub fn rootfs_option(&self) -> &RootFSOption<D> {
-        &self.rootfs_option
-    }
-
-    pub fn cmd(&self) -> &Command {
-        &self.cmd
-    }
-}
-
-impl List {
-    pub fn new() -> Result<List, Box<dyn std::error::Error>> {
-        let user_info = user::User::new()?;
-
-        Ok(List { user: user_info })
-    }
-
-    pub fn user(&self) -> &user::User {
-        &self.user
-    }
-}
-
-impl Exec {
-    pub fn new(name: String, cmd: Option<String>) -> Exec {
-        Exec {
-            name: name,
-            cmd: cmd,
-        }
-    }
-}
-
-impl Delete {
-    pub fn new(name: String) -> Delete {
-        Delete { name: name }
-    }
-    pub fn name(&self) -> &str {
-        &self.name
-    }
 }
 
 impl File {
