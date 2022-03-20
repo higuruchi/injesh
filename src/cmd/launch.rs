@@ -1,9 +1,9 @@
 use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
 use crate::launch::Launch;
-use crate::utils;
 use crate::user;
-use std::ffi::CString;
+use crate::utils;
+use std::ffi::{CString, OsStr};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -29,6 +29,7 @@ pub enum Error {
     Waitpid,
     UnmountFailed(nix::errno::Errno),
     MountFailed(nix::errno::Errno),
+    InputValue,
 }
 
 impl fmt::Display for Error {
@@ -43,6 +44,7 @@ impl fmt::Display for Error {
             NotImplemented => write!(f, "Not implemented"),
             Fork => write!(f, "failed fork"),
             Waitpid => write!(f, "failed waitpid"),
+            InputValue => write!(f, "Input value is illegal"),
         }
     }
 }
@@ -102,12 +104,14 @@ where
                     // execでプログラムを実行
 
                     let main = CString::new(launch.cmd().main())?;
-                    let mut detail: Vec<CString> = vec!(main.clone());
-                    for d in launch.cmd().detail() {
-                        let d_clone = d.clone();
-                        detail.push(CString::new(d_clone)?);
 
-                    }
+                    let detail: Vec<CString> = launch
+                        .cmd()
+                        .detail_iter()
+                        // TODO: mapないでErrorが生じた場合どのようにするのがベスト？
+                        .map(|d| CString::new(d).unwrap())
+                        .collect();
+
                     execv(&main, &detail)?;
                 }
                 Err(_) => return Err(Error::Fork)?,
@@ -127,63 +131,92 @@ impl LaunchStruct {
     }
 }
 
+/// デバックコンテナを起動するために必要なディレクトリ群を初期化
+/// 
+/// - `~/.injesh/containers/<CONTAINER_NAME>/upper`
+/// 
+///     デバックコンテナ起動前の`/var/lib/docker/overlay2/<HASH_ID>/upper`を保存しておくためのディレクトリ
+/// 
+/// - `~/.injesh/containers/<CONTAINER_NAME>/setting.yaml`
+///
+///     デバックコンテナの`rootfs`やデバックコンテナ作成後に実行するコマンドなどを保存する設定ファイル
 fn initialize_setting<DO: Downloader>(
     launch: &command::Launch<DO>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let user = user::User::new()?;
+    let dcontainer_base = format!("{}/{}", user.containers(), launch.name());
 
     // rootfsの種類などが記載された設定ファイルsetting.yamlを~/.injesh/containers/に作成する
-    match Path::new(&format!("{}/{}", user.containers(), launch.name())).exists() {
+    match Path::new(&dcontainer_base).exists() {
         true => return Err(Error::AlreadyExists)?,
         false => {
-            fs::create_dir_all(format!(
-                "{}/{}/upper",
-                user.containers(),
-                launch.name()
-            ))?;
-            let mut setting_file = fs::File::create(format!(
-                "{}/{}/setting.yaml",
-                user.containers(),
-                launch.name()
-            ))?;
+            fs::create_dir_all(format!("{}/upper", &dcontainer_base))?;
+            let mut setting_file = fs::File::create(format!("{}/setting.yaml", &dcontainer_base))?;
             // TODO: 設定ファイルの形式を決めてない
             setting_file.write_all(b"content of setting.yaml")?;
         }
     }
 
     // /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
-    for entry in fs::read_dir(launch.target_container().upperdir())? {
-        let dir = entry?;
-        let path = dir.path();
-        let file_name = match path.file_name() {
-            Some(file_name_os_str) => match file_name_os_str.to_str() {
-                Some(file_name_str) => file_name_str,
-                None => continue,
-            },
-            None => continue,
-        };
-
-        fs::copy(
-            &path,
-            format!(
-                "{}/{}/upper/{}",
-                user.containers(),
-                launch.name(),
-                file_name
-            ),
-        )?;
-    }
+    copy_dir_recursively(
+        launch.target_container().upperdir(),
+        format!("{}/upper", &dcontainer_base),
+    )?;
 
     Ok(())
 }
 
+/// ディレクトリを再起的にコピーする関数
+/// ```ignore
+/// copy_dir_recursively("/path/to/from", "/path/to/to")
+/// ```
+fn copy_dir_recursively<P, Q>(from: P, to: Q) -> Result<u64, Box<dyn std::error::Error>>
+where
+    P: AsRef<OsStr> + AsRef<Path>,
+    Q: AsRef<OsStr> + AsRef<Path>,
+{
+    if !Path::new(&from).is_dir() {
+        Err(Error::InputValue)?
+    }
+    if !Path::new(&to).is_dir() {
+        Err(Error::InputValue)?
+    }
+
+    let mut copy_num = 0;
+    for entry_result in fs::read_dir(from)? {
+        let entry = entry_result?;
+        let to_name = Path::new(&to).to_str().ok_or(Error::InputValue)?;
+        let to_path_string = format!(
+            "{}/{}",
+            to_name,
+            entry
+                .file_name()
+                .as_os_str()
+                .to_str()
+                .ok_or(Error::InputValue)?
+        );
+        let to_path = Path::new(&to_path_string);
+
+        if entry.file_type()?.is_dir() {
+            fs::create_dir(&to_path)?;
+            copy_dir_recursively(entry.path(), &to_path)?;
+        } else {
+            fs::copy(entry.path(), &to_path)?;
+        }
+    }
+    Ok(1)
+}
+
+/// `/var/lib/docker/overlay2/<HASH_ID>/upper`を`unmount`した後、任意の`rootfs`を挿入したものを`mount`する
 fn remount<DO: Downloader>(launch: &command::Launch<DO>) -> Result<(), Box<dyn std::error::Error>> {
     let rootfs_path = match launch.rootfs_option() {
         RootFSOption::RootfsImage(image) => {
             match image.check_rootfs_newest() {
-                Ok(is_newest) => if !is_newest {
-                    image.download_image()?;
-                },
+                Ok(is_newest) => {
+                    if !is_newest {
+                        image.download_image()?;
+                    }
+                }
                 Err(e) => {
                     Err(e)?;
                 }
@@ -293,5 +326,32 @@ impl Ns {
     fn setns_uts(&self) -> Result<(), Box<dyn std::error::Error>> {
         setns(self.uts.as_raw_fd(), CloneFlags::empty())?;
         Ok(())
+    }
+}
+
+mod tests {
+    use super::*;
+    use std::fs::{self, File};
+
+    #[test]
+    #[ignore]
+    fn test_copy_dir_recursively() {
+        fs::create_dir_all("./upper/dir1/dir2");
+        File::create("./upper/file1");
+        File::create("./upper/file2");
+        File::create("./upper/dir1/file3");
+        File::create("./upper/dir1/dir2/file3");
+        fs::create_dir("./upper_copy");
+
+        match copy_dir_recursively("./upper", "./upper_copy") {
+            Ok(num) => {
+                fs::remove_dir_all("./upper");
+                fs::remove_dir_all("./upper_copy");
+            }
+            Err(e) => {
+                fs::remove_dir_all("./upper");
+                fs::remove_dir_all("./upper_copy");
+            }
+        };
     }
 }

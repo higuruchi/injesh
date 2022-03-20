@@ -32,7 +32,6 @@ where
     File(FileSubCommand),
 }
 
-
 #[derive(Debug)]
 pub struct Init {
     user: user::User,
@@ -123,7 +122,6 @@ where
         name: String,
         cmd: Cmd,
     ) -> Result<Launch<D>, Box<dyn std::error::Error>> {
-
         Ok(Launch {
             target_container: target_container,
             rootfs_option: rootfs_option,
@@ -328,7 +326,6 @@ impl File {
     }
 }
 
-
 /// デバックコンテナ内で実行するコマンドを表す構造体
 /// コンストラクタの引数として何も指定されていない場合は`/bin/bash`がデフォルトで用いられる
 /// ```ignore
@@ -336,39 +333,34 @@ impl File {
 ///     String::from("echo"),
 ///     String::from("hoge"),
 /// ];
-/// 
+///
 /// let cmd = Cmd::new(cmd_vec)
 /// ```
 #[derive(Debug)]
 pub struct Cmd {
-    /// indexhはCmdをイテレータとした際のインデックスとして用いる予定
-    index: usize,
-    /// mainはコマンドの第1引数を表す。
+    /// mainはexecシステムコールの第1引数を表す。
     /// `echo hogehoge`の場合は`echo`が入る
     main: String,
-    /// コマンドの第２引数移行が入るb
-    /// `echo hoge`の場合は`hoge`が入る
+    /// execシステムコールの第２引数以降が入る
+    /// `echo hoge`の場合は`echo`, `hoge`が入る
     detail: Vec<String>,
 }
 
 impl Cmd {
-    pub fn new(detail: Vec<String>) -> Cmd {
-        let mut d_iter = detail.iter();
-        let mut detail = Vec::new();
-        let main = match d_iter.next() {
+    pub fn new(mut detail: Box<dyn Iterator<Item = String>>) -> Cmd {
+        let main = match detail.next() {
             Some(cmd) => cmd.to_string(),
             None => "/bin/bash".to_string(),
         };
 
-        for d in d_iter {
-            detail.push(d.to_string())
+        let mut detail_vec = vec![main.clone()];
+        for d in detail {
+            detail_vec.push(d.to_string())
         }
 
         Cmd {
-            index: 0,
             main: main,
-            detail: detail,
-
+            detail: detail_vec,
         }
     }
 
@@ -376,27 +368,11 @@ impl Cmd {
         &self.main
     }
 
-    // pub fn detail_iter(&self) -> Vec<&str> {
-    //     let res: Vec<&str> = self.detail.iter().map(|d| &(*d)).collect::<Vec<&str>>();
-    //     res
-    // }
-
     pub fn detail(&self) -> &Vec<String> {
         &self.detail
     }
+
+    pub fn detail_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &str> + 'a> {
+        Box::new(self.detail.iter().map(|string| (*string).as_str()))
+    }
 }
-
-// impl<'a> Iterator for &Command {
-//     type Item = &'a str;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-
-//         if self.index <= self.detail.len() {
-//             return None
-//         }
-    
-//         let index = self.index;
-//         self.index += 1;
-//         Some(&self.detail[index])
-//     }
-// }
