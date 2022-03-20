@@ -1,5 +1,5 @@
 use crate::command::{
-    self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand, Command,
+    self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand, Cmd,
 };
 use crate::{container, image, image_downloader, image_downloader_lxd, user};
 use clap::{Args, Parser, Subcommand};
@@ -56,7 +56,7 @@ fn initialize_init() -> Result<Init, Box<dyn std::error::Error>> {
     Ok(Init::new()?)
 }
 
-fn initialize_launch<'a>(
+fn initialize_launch(
     launch: LaunchArgs,
 ) -> Result<Launch<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
     use command::launch_error::Error;
@@ -69,7 +69,7 @@ fn initialize_launch<'a>(
     )?;
 
     let container = container::Container::new(&launch.container_id_or_name)?;
-    Ok(Launch::new(container, rootfs, String::from(launch.name), Command::new(launch.cmd))?)
+    Ok(Launch::new(container, rootfs, String::from(launch.name), Cmd::new(launch.cmd))?)
 }
 
 fn initialize_list() -> Result<List, Box<dyn std::error::Error>> {

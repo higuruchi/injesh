@@ -77,7 +77,7 @@ where
     target_container: container::Container,
     rootfs_option: RootFSOption<D>,
     name: String,
-    cmd: Command,
+    cmd: Cmd,
 }
 
 #[derive(Debug)]
@@ -121,7 +121,7 @@ where
         target_container: container::Container,
         rootfs_option: RootFSOption<D>,
         name: String,
-        cmd: Command,
+        cmd: Cmd,
     ) -> Result<Launch<D>, Box<dyn std::error::Error>> {
 
         Ok(Launch {
@@ -144,7 +144,7 @@ where
         &self.rootfs_option
     }
 
-    pub fn cmd(&self) -> &Command {
+    pub fn cmd(&self) -> &Cmd {
         &self.cmd
     }
 }
@@ -328,15 +328,31 @@ impl File {
     }
 }
 
+
+/// デバックコンテナ内で実行するコマンドを表す構造体
+/// コンストラクタの引数として何も指定されていない場合は`/bin/bash`がデフォルトで用いられる
+/// ```ignore
+/// let cmd_vec = vec![
+///     String::from("echo"),
+///     String::from("hoge"),
+/// ];
+/// 
+/// let cmd = Cmd::new(cmd_vec)
+/// ```
 #[derive(Debug)]
-pub struct Command {
+pub struct Cmd {
+    /// indexhはCmdをイテレータとした際のインデックスとして用いる予定
     index: usize,
+    /// mainはコマンドの第1引数を表す。
+    /// `echo hogehoge`の場合は`echo`が入る
     main: String,
+    /// コマンドの第２引数移行が入るb
+    /// `echo hoge`の場合は`hoge`が入る
     detail: Vec<String>,
 }
 
-impl Command {
-    pub fn new(detail: Vec<String>) -> Command {
+impl Cmd {
+    pub fn new(detail: Vec<String>) -> Cmd {
         let mut d_iter = detail.iter();
         let mut detail = Vec::new();
         let main = match d_iter.next() {
@@ -348,7 +364,7 @@ impl Command {
             detail.push(d.to_string())
         }
 
-        Command {
+        Cmd {
             index: 0,
             main: main,
             detail: detail,

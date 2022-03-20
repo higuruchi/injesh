@@ -2,6 +2,7 @@ use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
 use crate::launch::Launch;
 use crate::utils;
+use crate::user;
 use std::ffi::CString;
 use std::fs::File;
 use std::io::prelude::*;
@@ -129,18 +130,20 @@ impl LaunchStruct {
 fn initialize_setting<DO: Downloader>(
     launch: &command::Launch<DO>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let user = user::User::new()?;
+
     // rootfsの種類などが記載された設定ファイルsetting.yamlを~/.injesh/containers/に作成する
-    match Path::new(&format!("{}/{}", launch.user().containers(), launch.name())).exists() {
+    match Path::new(&format!("{}/{}", user.containers(), launch.name())).exists() {
         true => return Err(Error::AlreadyExists)?,
         false => {
             fs::create_dir_all(format!(
                 "{}/{}/upper",
-                launch.user().containers(),
+                user.containers(),
                 launch.name()
             ))?;
             let mut setting_file = fs::File::create(format!(
                 "{}/{}/setting.yaml",
-                launch.user().containers(),
+                user.containers(),
                 launch.name()
             ))?;
             // TODO: 設定ファイルの形式を決めてない
@@ -164,7 +167,7 @@ fn initialize_setting<DO: Downloader>(
             &path,
             format!(
                 "{}/{}/upper/{}",
-                launch.user().containers(),
+                user.containers(),
                 launch.name(),
                 file_name
             ),
