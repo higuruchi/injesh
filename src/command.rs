@@ -138,6 +138,10 @@ where
         &self.target_container
     }
 
+    pub fn target_container_mut(&mut self) -> &mut container::Container {
+        &mut self.target_container
+    }
+
     pub fn rootfs_option(&self) -> &RootFSOption<D> {
         &self.rootfs_option
     }

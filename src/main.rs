@@ -9,7 +9,7 @@ fn main() {
     let launch = launch::LaunchStruct::new();
     let delete = delete::DeleteStruct::new();
     let exec = exec::ExecStruct::new();
-    let handler = handler::HandlerStruct::new(command, init, list, launch, exec, delete);
+    let mut handler = handler::HandlerStruct::new(command, init, list, launch, exec, delete);
 
     handler.run();
 }
