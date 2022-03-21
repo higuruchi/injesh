@@ -99,7 +99,6 @@ impl Container {
                 get_pid_from_container_id(&id)?
             }
         };
-
         // println!("------------");
         let docker_info: DockerInspectApiResponse = serde_json::from_str(&request_docker_api(
             "GET",
@@ -153,9 +152,9 @@ impl Container {
 
         let mut id = docker_info.containers[0].Id.to_string();
         id.truncate(12);
-
         Ok(id)
     }
+
     pub fn restart(name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let id = Self::convert_name_to_id(name)?;
         request_docker_api("POST", &format!("/containers/{id}/restart", id = id), None)?;

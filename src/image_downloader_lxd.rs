@@ -151,7 +151,12 @@ impl image_downloader::Downloader for Downloader {
         ))?
         .text()?;
 
-        let rootfs_hash = fs::read_to_string(local_rootfs_hash_path)?;
+        let rootfs_hash = match fs::read_to_string(local_rootfs_hash_path) {
+            Ok(rootfs_hash) => rootfs_hash,
+            Err(e) => {
+                return Ok(false);
+            }
+        };
 
         if downloaded_rootfs_hash == rootfs_hash {
             Ok(true)
