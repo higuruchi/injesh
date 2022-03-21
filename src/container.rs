@@ -2,7 +2,6 @@ use form_urlencoded;
 use serde::Deserialize;
 use std::io::prelude::*;
 use std::os::unix::net::UnixStream;
-use std::process::Command;
 use std::{error, fmt, path};
 // debug
 // use std::collections::HashMap;
@@ -62,6 +61,7 @@ pub enum Error {
     GraphDriverNotOverlay2,
     GraphDriverPathNotFound,
     ApiResponseError(String),
+    ContainerProcessNotFound,
 }
 
 impl fmt::Display for Error {
@@ -77,6 +77,7 @@ impl fmt::Display for Error {
             Error::ApiResponseError(message) => {
                 write!(f, "API response error with message: {}", message)
             }
+            Error::ContainerProcessNotFound => write!(f, "container process not found"),
         }
     }
 }
@@ -163,31 +164,83 @@ impl Container {
 }
 
 fn get_pid_from_container_id(target_container_id: &str) -> Result<u32, Box<dyn std::error::Error>> {
-    // TODO: Eliminate dependency on shell command.
-    let mut cmd = Command::new("sh");
-    cmd.arg("-c").arg(&format!("ps --ppid $(ps ax -o pid= -o args= | grep 'moby' | grep '\\-id {target_container_id}' | awk '$0=$0'1 | head -1) -o pid= | head -1", target_container_id = target_container_id));
-    let out = cmd.output()?;
-    // debug
-    // let out: Vec<&OsStr> = cmd.get_args().collect();
-    let pid = String::from_utf8(out.stdout)?.trim().parse::<u32>()?;
+    let pid_list = std::fs::read_dir("/proc")?;
+    // filter only pid (excluding /proc/uptime .. etc.)
+    let pid_list: Vec<u32> = pid_list
+        .filter_map(|entry| {
+            entry
+                .ok()?
+                .file_name()
+                .into_string()
+                .unwrap_or("".to_string())
+                .parse::<u32>()
+                .ok()
+        })
+        .collect();
+    // reverse pid_list
+    // We can guess the Docker process is being behind in PID order in most cases.
+    let pid_list: Vec<u32> = pid_list.iter().rev().cloned().collect();
 
-    valid_pid_is_container(pid)?;
-    Ok(pid)
-}
+    let pid = search_pid_linear(pid_list, target_container_id)?;
 
-fn valid_pid_is_container(pid: u32) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: Eliminate dependency on shell command.
-    let mut cmd = Command::new("sh");
-    cmd.arg("-c")
-        .arg(format!("ps -p $(ps -p {pid} -o ppid=) -o args=", pid = pid));
-    let out = cmd.output()?;
-    // check if `out` contains `moby`
-    let stdout = String::from_utf8(out.stdout)?;
-    if !stdout.contains("moby") {
+    if !valid_pid_is_container(pid)? {
         Err(Error::InvalidPid)?
     }
 
-    Ok(())
+    Ok(pid)
+}
+
+fn search_pid_linear(
+    pid_list: Vec<u32>,
+    container_id: &str,
+) -> Result<u32, Box<dyn std::error::Error>> {
+    // linear search
+    for pid in pid_list {
+        // `/proc/{pid}/cmdline` contains process name and arguments.
+        let cmdline: String = std::fs::read_to_string(&format!("/proc/{pid}/cmdline", pid = pid))?;
+        // docker process arg `-id\0<ID>` is the key to find the container.
+        if cmdline.contains(&format!("-id\0{}", container_id)) {
+            // `/proc/{pid}/task/{pid}/children` contains child pids.
+            let child_pid_list =
+                std::fs::read_to_string(&format!("/proc/{pid}/task/{pid}/children", pid = pid))?;
+            // what we need is the first child pid.
+            // if child pid is single, trailing whitespace delimiter is still used, so can split it.
+            let first_child_pid = child_pid_list
+                .split_once(' ')
+                .ok_or(Error::ContainerProcessNotFound)?
+                .0
+                .parse::<u32>()?;
+
+            return Ok(first_child_pid);
+        }
+    }
+
+    Err(Error::ContainerProcessNotFound)?
+}
+
+/// valid: Ok(true)
+///
+/// invalid: Ok(false)
+///
+/// error: Err
+fn valid_pid_is_container(pid: u32) -> Result<bool, Box<dyn std::error::Error>> {
+    // `/proc/{pid}/cmdline` contains many arguments.
+    let pid_string = std::fs::read_to_string(&format!("/proc/{pid}/stat", pid = pid))?;
+    // the parent process id is the forth argument.
+    let parent_pid = pid_string
+        .split_whitespace()
+        .nth(3)
+        .ok_or(Error::InvalidPid)?
+        .parse::<u32>()?;
+
+    // docker process contains `moby` in its process name.
+    let parent_pid_cmdline =
+        std::fs::read_to_string(&format!("/proc/{pid}/cmdline", pid = parent_pid))?;
+    if !parent_pid_cmdline.contains("moby") {
+        return Ok(false);
+    }
+
+    Ok(true)
 }
 
 fn encode_request_path(path: &str, params: &str) -> Result<String, Box<dyn std::error::Error>> {
