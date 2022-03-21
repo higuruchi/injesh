@@ -1,4 +1,4 @@
-use crate::{image, image_downloader, user};
+use crate::{container, image, image_downloader, user};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -56,29 +56,16 @@ pub mod init_error {
     impl std::error::Error for Error {}
 }
 
-#[derive(Debug)]
-pub struct Exec {
-    name: String,
-    cmd: Option<String>,
-}
+impl Init {
+    pub fn new() -> Result<Init, Box<dyn std::error::Error>> {
+        let user = user::User::new()?;
 
-pub mod exec_error {
-    use std::fmt;
-
-    #[derive(Debug)]
-    pub enum Error {
-        NameNotFound,
+        Ok(Init { user: user })
     }
 
-    impl fmt::Display for Error {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match self {
-                Error::NameNotFound => write!(f, "Name not Found"),
-            }
-        }
+    pub fn user(&self) -> &user::User {
+        &self.user
     }
-
-    impl std::error::Error for Error {}
 }
 
 #[derive(Debug)]
@@ -86,10 +73,78 @@ pub struct Launch<D>
 where
     D: image_downloader::Downloader,
 {
-    target_container: String,
+    target_container: container::Container,
     rootfs_option: RootFSOption<D>,
     name: String,
-    cmd: Option<String>,
+    cmd: Cmd,
+}
+
+#[derive(Debug)]
+pub enum RootFSOption<D>
+where
+    D: image_downloader::Downloader,
+{
+    Rootfs(PathBuf),
+    RootfsImage(image::Image<D>),
+    RootfsDocker(String),
+    RootfsLxd(String),
+    None,
+}
+
+pub mod launch_error {
+    use std::fmt;
+
+    #[derive(Debug)]
+    pub enum Error {
+        ContainerIdOrNameNotFound,
+        NameNotFound,
+    }
+
+    impl fmt::Display for Error {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Error::ContainerIdOrNameNotFound => write!(f, "Container id or name not found"),
+                Error::NameNotFound => write!(f, "Name not found"),
+            }
+        }
+    }
+
+    impl std::error::Error for Error {}
+}
+
+impl<D> Launch<D>
+where
+    D: image_downloader::Downloader,
+{
+    pub fn new(
+        target_container: container::Container,
+        rootfs_option: RootFSOption<D>,
+        name: String,
+        cmd: Cmd,
+    ) -> Result<Launch<D>, Box<dyn std::error::Error>> {
+        Ok(Launch {
+            target_container: target_container,
+            rootfs_option: rootfs_option,
+            name: name,
+            cmd: cmd,
+        })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn target_container(&self) -> &container::Container {
+        &self.target_container
+    }
+
+    pub fn rootfs_option(&self) -> &RootFSOption<D> {
+        &self.rootfs_option
+    }
+
+    pub fn cmd(&self) -> &Cmd {
+        &self.cmd
+    }
 }
 
 #[derive(Debug)]
@@ -127,37 +182,50 @@ pub mod list_error {
     impl std::error::Error for Error {}
 }
 
-#[derive(Debug)]
-pub enum RootFSOption<D>
-where
-    D: image_downloader::Downloader,
-{
-    Rootfs(PathBuf),
-    RootfsImage(image::Image<D>),
-    RootfsDocker(String),
-    RootfsLxd(String),
-    None,
+impl List {
+    pub fn new() -> Result<List, Box<dyn std::error::Error>> {
+        let user_info = user::User::new()?;
+
+        Ok(List { user: user_info })
+    }
+
+    pub fn user(&self) -> &user::User {
+        &self.user
+    }
 }
 
-pub mod launch_error {
+#[derive(Debug)]
+pub struct Exec {
+    name: String,
+    cmd: Option<String>,
+}
+
+pub mod exec_error {
     use std::fmt;
 
     #[derive(Debug)]
     pub enum Error {
-        ContainerIdOrNameNotFound,
         NameNotFound,
     }
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
-                Error::ContainerIdOrNameNotFound => write!(f, "Container id or name not found"),
-                Error::NameNotFound => write!(f, "Name not found"),
+                Error::NameNotFound => write!(f, "Name not Found"),
             }
         }
     }
 
     impl std::error::Error for Error {}
+}
+
+impl Exec {
+    pub fn new(name: String, cmd: Option<String>) -> Exec {
+        Exec {
+            name: name,
+            cmd: cmd,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -201,6 +269,15 @@ pub mod delete_error {
     impl std::error::Error for Error {}
 }
 
+impl Delete {
+    pub fn new(name: String) -> Delete {
+        Delete { name: name }
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[derive(Debug)]
 pub enum FileSubCommand {
     Pull(File),
@@ -239,67 +316,6 @@ pub mod file_error {
     impl std::error::Error for Error {}
 }
 
-impl Init {
-    pub fn new() -> Result<Init, Box<dyn std::error::Error>> {
-        let user = user::User::new()?;
-
-        Ok(Init { user: user })
-    }
-
-    pub fn user(&self) -> &user::User {
-        &self.user
-    }
-}
-
-impl<D> Launch<D>
-where
-    D: image_downloader::Downloader,
-{
-    pub fn new(
-        target_container: String,
-        rootfs_option: RootFSOption<D>,
-        name: String,
-        cmd: Option<String>,
-    ) -> Launch<D> {
-        Launch {
-            target_container: target_container,
-            rootfs_option: rootfs_option,
-            name: name,
-            cmd: cmd,
-        }
-    }
-}
-
-impl List {
-    pub fn new() -> Result<List, Box<dyn std::error::Error>> {
-        let user_info = user::User::new()?;
-
-        Ok(List { user: user_info })
-    }
-
-    pub fn user(&self) -> &user::User {
-        &self.user
-    }
-}
-
-impl Exec {
-    pub fn new(name: String, cmd: Option<String>) -> Exec {
-        Exec {
-            name: name,
-            cmd: cmd,
-        }
-    }
-}
-
-impl Delete {
-    pub fn new(name: String) -> Delete {
-        Delete { name: name }
-    }
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
-
 impl File {
     pub fn new(name: String, from: PathBuf, to: PathBuf) -> File {
         File {
@@ -307,5 +323,56 @@ impl File {
             from: from,
             to: to,
         }
+    }
+}
+
+/// デバックコンテナ内で実行するコマンドを表す構造体
+/// コンストラクタの引数として何も指定されていない場合は`/bin/bash`がデフォルトで用いられる
+/// ```ignore
+/// let cmd_vec = vec![
+///     String::from("echo"),
+///     String::from("hoge"),
+/// ];
+///
+/// let cmd = Cmd::new(cmd_vec)
+/// ```
+#[derive(Debug)]
+pub struct Cmd {
+    /// mainはexecシステムコールの第1引数を表す。
+    /// `echo hogehoge`の場合は`echo`が入る
+    main: String,
+    /// execシステムコールの第２引数以降が入る
+    /// `echo hoge`の場合は`echo`, `hoge`が入る
+    detail: Vec<String>,
+}
+
+impl Cmd {
+    pub fn new(mut detail: Box<dyn Iterator<Item = String>>) -> Cmd {
+        let main = match detail.next() {
+            Some(cmd) => cmd,
+            None => "/bin/bash".to_string(),
+        };
+
+        let mut detail_vec = vec![main.clone()];
+        for d in detail {
+            detail_vec.push(d.to_string())
+        }
+
+        Cmd {
+            main: main,
+            detail: detail_vec,
+        }
+    }
+
+    pub fn main(&self) -> &str {
+        &self.main
+    }
+
+    pub fn detail(&self) -> &Vec<String> {
+        &self.detail
+    }
+
+    pub fn detail_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &str> + 'a> {
+        Box::new(self.detail.iter().map(|string| (*string).as_str()))
     }
 }

@@ -1,12 +1,14 @@
 use crate::command::{
-    self, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption, SubCommand,
+    self, Cmd, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption,
+    SubCommand,
 };
-use crate::{image, image_downloader, image_downloader_lxd, user};
+use crate::{container, image, image_downloader, image_downloader_lxd, user};
 use clap::{Args, Parser, Subcommand};
+use regex::Regex;
 use std::path::PathBuf;
 
-pub fn parse() -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>>
-{
+pub fn parse<'a>(
+) -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
     let args: Cli = Cli::parse();
     match args.action {
         Action::Delete(delete) => Ok(SubCommand::Delete(initialize_delete(delete)?)),
@@ -67,12 +69,14 @@ fn initialize_launch(
         launch.opt_rootfs_lxd.as_ref().map(|r| r.as_str()),
     )?;
 
+    let container = container::Container::new(&launch.container_id_or_name)?;
+
     Ok(Launch::new(
-        String::from(launch.container_id_or_name),
+        container,
         rootfs,
         String::from(launch.name),
-        launch.cmd,
-    ))
+        Cmd::new(Box::new(launch.cmd.into_iter())),
+    )?)
 }
 
 fn initialize_list() -> Result<List, Box<dyn std::error::Error>> {
@@ -99,9 +103,12 @@ fn check_rootfs(
 
         // distribution/version format validation
         // e.g. busybox/1.34.1
-        let distri_and_version = arg_rootfs_image
-            .split_once("/")
-            .unwrap_or(Err(crate::image::Error::ImageSyntaxError)?);
+        let distri_and_version = match arg_rootfs_image.split_once("/") {
+            Some(d) => d,
+            None => Err(crate::image::Error::ImageSyntaxError)?,
+        };
+        // .unwrap_or(Err(crate::image::Error::ImageSyntaxError)?);
+
         if distri_and_version.0.len() == 0 || distri_and_version.1.len() == 0 {
             Err(crate::image::Error::ImageSyntaxError)?
         }
@@ -255,7 +262,7 @@ pub struct LaunchArgs {
     #[clap()]
     pub name: String,
     #[clap()]
-    pub cmd: Option<String>,
+    pub cmd: Vec<String>,
 }
 
 #[derive(Args)]

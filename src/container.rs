@@ -98,7 +98,6 @@ impl Container {
                 get_pid_from_container_id(&id)?
             }
         };
-
         // println!("------------");
         let docker_info: DockerInspectApiResponse = serde_json::from_str(&request_docker_api(
             "GET",
@@ -152,9 +151,9 @@ impl Container {
 
         let mut id = docker_info.containers[0].Id.to_string();
         id.truncate(12);
-
         Ok(id)
     }
+
     pub fn restart(name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let id = Self::convert_name_to_id(name)?;
         request_docker_api("POST", &format!("/containers/{id}/restart", id = id), None)?;
@@ -166,14 +165,13 @@ impl Container {
 fn get_pid_from_container_id(target_container_id: &str) -> Result<u32, Box<dyn std::error::Error>> {
     // TODO: Eliminate dependency on shell command.
     let mut cmd = Command::new("sh");
-    cmd.arg("-c").arg(&format!("ps --ppid $(ps ax -o pid= -o args= | grep 'moby' | grep '\\-id {target_container_id}' | awk '$0=$0'1 | head -1) -o pid=", target_container_id = target_container_id));
+    cmd.arg("-c").arg(&format!("ps --ppid $(ps ax -o pid= -o args= | grep 'moby' | grep '\\-id {target_container_id}' | awk '$0=$0'1 | head -1) -o pid= | head -1", target_container_id = target_container_id));
     let out = cmd.output()?;
     // debug
     // let out: Vec<&OsStr> = cmd.get_args().collect();
     let pid = String::from_utf8(out.stdout)?.trim().parse::<u32>()?;
 
     valid_pid_is_container(pid)?;
-
     Ok(pid)
 }
 

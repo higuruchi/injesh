@@ -27,7 +27,7 @@ pub trait Handler {
     fn run(&self);
 }
 
-impl<I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
+impl<'a, I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
 where
     I: Init,
     L: List,
@@ -64,7 +64,7 @@ where
     }
 }
 
-impl<I, L, LA, E, D, DO> HandlerStruct<I, L, LA, E, D, DO>
+impl<'a, I, L, LA, E, D, DO> HandlerStruct<I, L, LA, E, D, DO>
 where
     I: Init,
     L: List,

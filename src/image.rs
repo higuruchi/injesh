@@ -123,7 +123,7 @@ where
     ///
     /// # Example
     /// ```~/.injesh/images/alpine/3.15/rootfs```
-    fn rootfs_path(&self) -> PathBuf {
+    pub fn rootfs_path(&self) -> PathBuf {
         PathBuf::from(&format!("{}/{}", self.image_base_path().display(), ROOTFS))
     }
 
