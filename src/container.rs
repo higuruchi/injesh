@@ -360,18 +360,12 @@ fn request_docker_api(
     drop(stream);
 
     let header_and_body = response
-    .split_once("\r\n\r\n")
-    .ok_or(Error::InvalidResponse)?;
-    let header = header_and_body
-        .0
-        .trim()
-        .to_string();
+        .split_once("\r\n\r\n")
+        .ok_or(Error::InvalidResponse)?;
+    let header = header_and_body.0.trim().to_string();
 
     // Exclude response header
-    let mut response_body = header_and_body
-        .1
-        .trim()
-        .to_string();
+    let mut response_body = header_and_body.1.trim().to_string();
 
     // Api error catch
     // println!("respo: ```{:?}```", response);
@@ -409,7 +403,10 @@ fn request_docker_api(
 
     // wrap with a brath
     // println!("res: ```{}```", response_body);
-    let response_body = format!(r#"{{"containers":{response_body}}}"#, response_body = response_body);
+    let response_body = format!(
+        r#"{{"containers":{response_body}}}"#,
+        response_body = response_body
+    );
 
     Ok(response_body)
 }
