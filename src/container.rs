@@ -359,17 +359,16 @@ fn request_docker_api(
     stream.read_to_string(&mut response)?;
     drop(stream);
 
-    let header = response
-        .split_once("\r\n\r\n")
-        .ok_or(Error::InvalidResponse)?
+    let header_and_body = response
+    .split_once("\r\n\r\n")
+    .ok_or(Error::InvalidResponse)?;
+    let header = header_and_body
         .0
         .trim()
         .to_string();
 
     // Exclude response header
-    let mut response = response
-        .split_once("\r\n\r\n")
-        .ok_or(Error::InvalidResponse)?
+    let mut response_body = header_and_body
         .1
         .trim()
         .to_string();
@@ -401,20 +400,18 @@ fn request_docker_api(
 
     // Case of inspect, response contains some string like:
     // 1522\r\n{"Id":...}\n\r\n0
-    let newline_number = response.match_indices('\n').count();
+    let newline_number = response_body.match_indices('\n').count();
     if newline_number > 1 {
-        response = response.split("\n").collect::<Vec<&str>>()[1]
+        response_body = response_body.split("\n").collect::<Vec<&str>>()[1]
             .trim()
             .to_string();
-    } else {
-        response = response;
     }
 
     // wrap with a brath
-    // println!("res: ```{}```", response);
-    let response = format!(r#"{{"containers":{response}}}"#, response = response);
+    // println!("res: ```{}```", response_body);
+    let response_body = format!(r#"{{"containers":{response_body}}}"#, response_body = response_body);
 
-    Ok(response)
+    Ok(response_body)
 }
 
 fn catch_error_message(response: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
