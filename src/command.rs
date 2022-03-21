@@ -357,7 +357,7 @@ impl Cmd {
             None => "/bin/bash".to_string(),
         };
 
-        let mut detail_vec = vec![main.clone()];
+        let mut detail_vec: Vec<String> = Vec::new();
         for d in detail {
             detail_vec.push(d.to_string())
         }

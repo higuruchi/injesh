@@ -1,0 +1,569 @@
+   Compiling injesh v0.1.0 (/home/ys/injesh)
+warning: unused import: `super::*`
+   --> src/cmd/launch.rs:345:9
+    |
+345 |     use super::*;
+    |         ^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` on by default
+
+warning: unused imports: `File`, `self`
+   --> src/cmd/launch.rs:346:19
+    |
+346 |     use std::fs::{self, File};
+    |                   ^^^^  ^^^^
+
+warning: unused import: `regex::Regex`
+ --> src/parser.rs:7:5
+  |
+7 | use regex::Regex;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `command::delete_error::Error`
+  --> src/parser.rs:27:9
+   |
+27 |     use command::delete_error::Error;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `command::exec_error::Error`
+  --> src/parser.rs:32:9
+   |
+32 |     use command::exec_error::Error;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `command::launch_error::Error`
+  --> src/parser.rs:63:9
+   |
+63 |     use command::launch_error::Error;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::*`
+  --> src/user.rs:84:9
+   |
+84 |     use super::*;
+   |         ^^^^^^^^
+
+warning: unused import: `super::*`
+   --> src/image_downloader_lxd.rs:259:9
+    |
+259 |     use super::*;
+    |         ^^^^^^^^
+
+warning: unused import: `crate::image`
+  --> src/test_image.rs:1:5
+   |
+1  | use crate::image;
+   |     ^^^^^^^^^^^^
+   |
+help: consider adding a `#[cfg(test)]` to the containing module
+  --> src/lib.rs:18:1
+   |
+18 | mod test_image;
+   | ^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::image_downloader`
+  --> src/test_image.rs:2:5
+   |
+2  | use crate::image_downloader;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: consider adding a `#[cfg(test)]` to the containing module
+  --> src/lib.rs:18:1
+   |
+18 | mod test_image;
+   | ^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::image_downloader_lxd`
+  --> src/test_image.rs:3:5
+   |
+3  | use crate::image_downloader_lxd;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: consider adding a `#[cfg(test)]` to the containing module
+  --> src/lib.rs:18:1
+   |
+18 | mod test_image;
+   | ^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::user`
+  --> src/test_image.rs:4:5
+   |
+4  | use crate::user;
+   |     ^^^^^^^^^^^
+   |
+help: consider adding a `#[cfg(test)]` to the containing module
+  --> src/lib.rs:18:1
+   |
+18 | mod test_image;
+   | ^^^^^^^^^^^^^^^
+
+warning: unreachable statement
+   --> src/cmd/launch.rs:101:9
+    |
+99  |           panic!();
+    |           -------- any code following this expression is unreachable
+100 | 
+101 | /         unsafe {
+102 | |             match fork() {
+103 | |                 // 親プロセスの場合
+104 | |                 Ok(ForkResult::Parent { child, .. }) => match waitpid(child, None) {
+...   |
+140 | |             }
+141 | |         };
+    | |__________^ unreachable statement
+    |
+    = note: `#[warn(unreachable_code)]` on by default
+
+warning[E0170]: pattern binding `AlreadyExists` is named the same as one of the variants of the type `cmd::launch::Error`
+  --> src/cmd/launch.rs:36:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ^^^^^^^^^^^^^ help: to match on the variant, qualify the path: `cmd::launch::Error::AlreadyExists`
+   |
+   = note: `#[warn(bindings_with_variant_name)]` on by default
+
+warning[E0170]: pattern binding `Umount` is named the same as one of the variants of the type `cmd::launch::Error`
+  --> src/cmd/launch.rs:37:13
+   |
+37 |             Umount => write!(f, "umount error"),
+   |             ^^^^^^ help: to match on the variant, qualify the path: `cmd::launch::Error::Umount`
+
+warning[E0170]: pattern binding `NonValidUnicode` is named the same as one of the variants of the type `cmd::launch::Error`
+  --> src/cmd/launch.rs:38:13
+   |
+38 |             NonValidUnicode => write!(f, "non valid unicode"),
+   |             ^^^^^^^^^^^^^^^ help: to match on the variant, qualify the path: `cmd::launch::Error::NonValidUnicode`
+
+warning[E0170]: pattern binding `InvalidRootFSPath` is named the same as one of the variants of the type `cmd::launch::Error`
+  --> src/cmd/launch.rs:39:13
+   |
+39 |             InvalidRootFSPath => write!(f, "invalid rootfs path"),
+   |             ^^^^^^^^^^^^^^^^^ help: to match on the variant, qualify the path: `cmd::launch::Error::InvalidRootFSPath`
+
+warning[E0170]: pattern binding `NotImplemented` is named the same as one of the variants of the type `cmd::launch::Error`
+  --> src/cmd/launch.rs:40:13
+   |
+40 |             NotImplemented => write!(f, "Not implemented"),
+   |             ^^^^^^^^^^^^^^ help: to match on the variant, qualify the path: `cmd::launch::Error::NotImplemented`
+
+warning[E0170]: pattern binding `Fork` is named the same as one of the variants of the type `cmd::launch::Error`
+  --> src/cmd/launch.rs:41:13
+   |
+41 |             Fork => write!(f, "failed fork"),
+   |             ^^^^ help: to match on the variant, qualify the path: `cmd::launch::Error::Fork`
+
+warning[E0170]: pattern binding `Waitpid` is named the same as one of the variants of the type `cmd::launch::Error`
+  --> src/cmd/launch.rs:42:13
+   |
+42 |             Waitpid => write!(f, "failed waitpid"),
+   |             ^^^^^^^ help: to match on the variant, qualify the path: `cmd::launch::Error::Waitpid`
+
+warning[E0170]: pattern binding `InputValue` is named the same as one of the variants of the type `cmd::launch::Error`
+  --> src/cmd/launch.rs:43:13
+   |
+43 |             InputValue => write!(f, "Input value is illegal"),
+   |             ^^^^^^^^^^ help: to match on the variant, qualify the path: `cmd::launch::Error::InputValue`
+
+warning: unreachable pattern
+  --> src/cmd/launch.rs:37:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ------------- matches any value
+37 |             Umount => write!(f, "umount error"),
+   |             ^^^^^^ unreachable pattern
+   |
+   = note: `#[warn(unreachable_patterns)]` on by default
+
+warning: unreachable pattern
+  --> src/cmd/launch.rs:38:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ------------- matches any value
+37 |             Umount => write!(f, "umount error"),
+38 |             NonValidUnicode => write!(f, "non valid unicode"),
+   |             ^^^^^^^^^^^^^^^ unreachable pattern
+
+warning: unreachable pattern
+  --> src/cmd/launch.rs:39:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ------------- matches any value
+...
+39 |             InvalidRootFSPath => write!(f, "invalid rootfs path"),
+   |             ^^^^^^^^^^^^^^^^^ unreachable pattern
+
+warning: unreachable pattern
+  --> src/cmd/launch.rs:40:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ------------- matches any value
+...
+40 |             NotImplemented => write!(f, "Not implemented"),
+   |             ^^^^^^^^^^^^^^ unreachable pattern
+
+warning: unreachable pattern
+  --> src/cmd/launch.rs:41:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ------------- matches any value
+...
+41 |             Fork => write!(f, "failed fork"),
+   |             ^^^^ unreachable pattern
+
+warning: unreachable pattern
+  --> src/cmd/launch.rs:42:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ------------- matches any value
+...
+42 |             Waitpid => write!(f, "failed waitpid"),
+   |             ^^^^^^^ unreachable pattern
+
+warning: unreachable pattern
+  --> src/cmd/launch.rs:43:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ------------- matches any value
+...
+43 |             InputValue => write!(f, "Input value is illegal"),
+   |             ^^^^^^^^^^ unreachable pattern
+
+warning[E0170]: pattern binding `CommandError` is named the same as one of the variants of the type `command::Error`
+  --> src/command.rs:15:13
+   |
+15 |             CommandError => write!(f, "Sub Command Error"),
+   |             ^^^^^^^^^^^^ help: to match on the variant, qualify the path: `command::Error::CommandError`
+
+warning: unused variable: `CommandError`
+  --> src/command.rs:15:13
+   |
+15 |             CommandError => write!(f, "Sub Command Error"),
+   |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_CommandError`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: value assigned to `request_path` is never read
+   --> src/container.rs:344:13
+    |
+344 |     let mut request_path = String::new();
+    |             ^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_assignments)]` on by default
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `e`
+   --> src/image_downloader_lxd.rs:156:17
+    |
+156 |             Err(e) => {
+    |                 ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `arch`
+   --> src/image_downloader_lxd.rs:194:9
+    |
+194 |         arch: &str,
+    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_arch`
+
+warning: unused variable: `exec`
+ --> src/cmd/exec.rs:7:20
+  |
+7 |     fn exec(&self, exec: &command::Exec) -> Result<(), Box<dyn std::error::Error>> {
+  |                    ^^^^ help: if this is intentional, prefix it with an underscore: `_exec`
+
+warning: unused variable: `AlreadyExists`
+  --> src/cmd/launch.rs:36:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_AlreadyExists`
+
+warning: unused variable: `Umount`
+  --> src/cmd/launch.rs:37:13
+   |
+37 |             Umount => write!(f, "umount error"),
+   |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_Umount`
+
+warning: unused variable: `NonValidUnicode`
+  --> src/cmd/launch.rs:38:13
+   |
+38 |             NonValidUnicode => write!(f, "non valid unicode"),
+   |             ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_NonValidUnicode`
+
+warning: unused variable: `InvalidRootFSPath`
+  --> src/cmd/launch.rs:39:13
+   |
+39 |             InvalidRootFSPath => write!(f, "invalid rootfs path"),
+   |             ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_InvalidRootFSPath`
+
+warning: unused variable: `NotImplemented`
+  --> src/cmd/launch.rs:40:13
+   |
+40 |             NotImplemented => write!(f, "Not implemented"),
+   |             ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_NotImplemented`
+
+warning: unused variable: `Fork`
+  --> src/cmd/launch.rs:41:13
+   |
+41 |             Fork => write!(f, "failed fork"),
+   |             ^^^^ help: if this is intentional, prefix it with an underscore: `_Fork`
+
+warning: unused variable: `Waitpid`
+  --> src/cmd/launch.rs:42:13
+   |
+42 |             Waitpid => write!(f, "failed waitpid"),
+   |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_Waitpid`
+
+warning: unused variable: `InputValue`
+  --> src/cmd/launch.rs:43:13
+   |
+43 |             InputValue => write!(f, "Input value is illegal"),
+   |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_InputValue`
+
+warning: unused variable: `main`
+   --> src/cmd/launch.rs:125:25
+    |
+125 |                     let main = CString::new(launch.cmd().main())?;
+    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_main`
+
+warning: field is never read: `user`
+   --> src/cmd/launch.rs:288:5
+    |
+288 |     user: File,
+    |     ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: associated function is never used: `setns_user`
+   --> src/cmd/launch.rs:328:8
+    |
+328 |     fn setns_user(&self) -> Result<(), Box<dyn std::error::Error>> {
+    |        ^^^^^^^^^^
+
+warning: variant is never constructed: `ContainerIdOrNameNotFound`
+  --> src/command.rs:99:9
+   |
+99 |         ContainerIdOrNameNotFound,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant is never constructed: `NameNotFound`
+   --> src/command.rs:100:9
+    |
+100 |         NameNotFound,
+    |         ^^^^^^^^^^^^
+
+warning: field is never read: `name`
+   --> src/command.rs:203:5
+    |
+203 |     name: String,
+    |     ^^^^^^^^^^^^
+
+warning: field is never read: `cmd`
+   --> src/command.rs:204:5
+    |
+204 |     cmd: Option<String>,
+    |     ^^^^^^^^^^^^^^^^^^^
+
+warning: variant is never constructed: `NameNotFound`
+   --> src/command.rs:212:9
+    |
+212 |         NameNotFound,
+    |         ^^^^^^^^^^^^
+
+warning: variant is never constructed: `NameNotFound`
+   --> src/command.rs:245:9
+    |
+245 |         NameNotFound,
+    |         ^^^^^^^^^^^^
+
+warning: field is never read: `name`
+   --> src/command.rs:293:5
+    |
+293 |     name: String,
+    |     ^^^^^^^^^^^^
+
+warning: field is never read: `from`
+   --> src/command.rs:294:5
+    |
+294 |     from: PathBuf,
+    |     ^^^^^^^^^^^^^
+
+warning: field is never read: `to`
+   --> src/command.rs:295:5
+    |
+295 |     to: PathBuf,
+    |     ^^^^^^^^^^^
+
+warning: variant is never constructed: `FileOperationNotFound`
+   --> src/command.rs:303:9
+    |
+303 |         FileOperationNotFound,
+    |         ^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant is never constructed: `FromNotFound`
+   --> src/command.rs:305:9
+    |
+305 |         FromNotFound,
+    |         ^^^^^^^^^^^^
+
+warning: variant is never constructed: `ToNotFound`
+   --> src/command.rs:306:9
+    |
+306 |         ToNotFound,
+    |         ^^^^^^^^^^
+
+warning: variant is never constructed: `NotInitialized`
+  --> src/container.rs:58:5
+   |
+58 |     NotInitialized,
+   |     ^^^^^^^^^^^^^^
+
+warning: variant is never constructed: `GraphDriverPathNotFound`
+  --> src/container.rs:64:5
+   |
+64 |     GraphDriverPathNotFound,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field is never read: `distribution`
+  --> src/image.rs:36:5
+   |
+36 |     distribution: String,
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: field is never read: `version`
+  --> src/image.rs:38:5
+   |
+38 |     version: String,
+   |     ^^^^^^^^^^^^^^^
+
+warning: field is never read: `user`
+  --> src/image.rs:40:5
+   |
+40 |     user: user::User,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: associated function is never used: `user`
+  --> src/image.rs:79:8
+   |
+79 |     fn user(&self) -> &user::User {
+   |        ^^^^
+
+warning: associated function is never used: `distribution`
+  --> src/image.rs:83:8
+   |
+83 |     fn distribution(&self) -> &str {
+   |        ^^^^^^^^^^^^
+
+warning: associated function is never used: `version`
+  --> src/image.rs:87:8
+   |
+87 |     fn version(&self) -> &str {
+   |        ^^^^^^^
+
+warning: constant is never used: `ROOTFS`
+  --> src/image_downloader_lxd.rs:14:1
+   |
+14 | const ROOTFS: &str = "rootfs";
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant is never constructed: `ImageNotFound`
+  --> src/image_downloader_lxd.rs:18:5
+   |
+18 |     ImageNotFound,
+   |     ^^^^^^^^^^^^^
+
+warning: field is never read: `distribution`
+   --> src/image_downloader_lxd.rs:173:5
+    |
+173 |     distribution: String,
+    |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: field is never read: `version`
+   --> src/image_downloader_lxd.rs:175:5
+    |
+175 |     version: String,
+    |     ^^^^^^^^^^^^^^^
+
+warning: field is never read: `arch`
+   --> src/image_downloader_lxd.rs:177:5
+    |
+177 |     arch: String,
+    |     ^^^^^^^^^^^^
+
+warning: associated function is never used: `distribution`
+   --> src/image_downloader_lxd.rs:236:8
+    |
+236 |     fn distribution(&self) -> &str {
+    |        ^^^^^^^^^^^^
+
+warning: associated function is never used: `arch`
+   --> src/image_downloader_lxd.rs:240:8
+    |
+240 |     fn arch(&self) -> &str {
+    |        ^^^^
+
+warning: variable `CommandError` should have a snake case name
+  --> src/command.rs:15:13
+   |
+15 |             CommandError => write!(f, "Sub Command Error"),
+   |             ^^^^^^^^^^^^ help: convert the identifier to snake case: `command_error`
+   |
+   = note: `#[warn(non_snake_case)]` on by default
+
+warning: variable `AlreadyExists` should have a snake case name
+  --> src/cmd/launch.rs:36:13
+   |
+36 |             AlreadyExists => write!(f, "Debug Container Already Exists"),
+   |             ^^^^^^^^^^^^^ help: convert the identifier to snake case: `already_exists`
+
+warning: variable `Umount` should have a snake case name
+  --> src/cmd/launch.rs:37:13
+   |
+37 |             Umount => write!(f, "umount error"),
+   |             ^^^^^^ help: convert the identifier to snake case (notice the capitalization): `umount`
+
+warning: variable `NonValidUnicode` should have a snake case name
+  --> src/cmd/launch.rs:38:13
+   |
+38 |             NonValidUnicode => write!(f, "non valid unicode"),
+   |             ^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `non_valid_unicode`
+
+warning: variable `InvalidRootFSPath` should have a snake case name
+  --> src/cmd/launch.rs:39:13
+   |
+39 |             InvalidRootFSPath => write!(f, "invalid rootfs path"),
+   |             ^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `invalid_root_fspath`
+
+warning: variable `NotImplemented` should have a snake case name
+  --> src/cmd/launch.rs:40:13
+   |
+40 |             NotImplemented => write!(f, "Not implemented"),
+   |             ^^^^^^^^^^^^^^ help: convert the identifier to snake case: `not_implemented`
+
+warning: variable `Fork` should have a snake case name
+  --> src/cmd/launch.rs:41:13
+   |
+41 |             Fork => write!(f, "failed fork"),
+   |             ^^^^ help: convert the identifier to snake case (notice the capitalization): `fork`
+
+warning: variable `Waitpid` should have a snake case name
+  --> src/cmd/launch.rs:42:13
+   |
+42 |             Waitpid => write!(f, "failed waitpid"),
+   |             ^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `waitpid`
+
+warning: variable `InputValue` should have a snake case name
+  --> src/cmd/launch.rs:43:13
+   |
+43 |             InputValue => write!(f, "Input value is illegal"),
+   |             ^^^^^^^^^^ help: convert the identifier to snake case: `input_value`
+
+warning: unused `Result` that must be used
+   --> src/cmd/launch.rs:135:21
+    |
+135 |                     execv(&CString::new("/bin/bash").unwrap(), &vec![&CString::new("/bin/bash").unwrap()]);
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_must_use)]` on by default
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+For more information about this error, try `rustc --explain E0170`.
+warning: `injesh` (lib) generated 82 warnings
+    Finished dev [unoptimized + debuginfo] target(s) in 6.70s

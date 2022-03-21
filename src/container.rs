@@ -168,7 +168,6 @@ impl Container {
     pub fn restart(&self) -> Result<(), Box<dyn std::error::Error>> {
         let id = self.container_id();
         request_docker_api("POST", &format!("/containers/{id}/restart", id = id), None)?;
-        panic!();
 
         Ok(())
     }
@@ -224,7 +223,6 @@ fn search_pid_linear(
                 std::fs::read_to_string(&format!("/proc/{pid}/task/{pid}/children", pid = pid))?;
             // what we need is the first child pid.
             // if child pid is single, trailing whitespace delimiter is still used, so can split it.
-            println!("hoge{:?}", child_pid_list.as_bytes());
             let first_child_pid = child_pid_list
                 .split_once(' ')
                 .ok_or(Error::ContainerProcessNotFound)?

@@ -82,7 +82,7 @@ where
             match fork() {
                 // 親プロセスの場合
                 Ok(ForkResult::Parent { child, .. }) => match waitpid(child, None) {
-                    Ok(status) => println!("Child exited {:?}", status),
+                    Ok(status) => println!("Child {:?}", status),
                     Err(_) => Err(Error::Waitpid)?,
                 },
                 // 子プロセス
@@ -101,15 +101,10 @@ where
 
                     // execでプログラムを実行
 
-                    let main = CString::new(launch.cmd().main())?;
-
-                    let detail: Vec<CString> = launch
-                        .cmd()
-                        .detail_iter()
-                        .filter_map(|s| CString::new(s).ok())
-                        .collect();
-
-                    execv(&main, &detail)?;
+                    use std::os::unix::process::CommandExt;
+                    std::process::Command::new(launch.cmd().main())
+                        .args(launch.cmd().detail())
+                        .exec();
                 }
                 Err(_) => return Err(Error::Fork)?,
             }
