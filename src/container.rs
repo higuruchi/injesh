@@ -1,9 +1,9 @@
 use form_urlencoded;
+use httparse::{Response, EMPTY_HEADER};
 use serde::Deserialize;
 use std::io::prelude::*;
 use std::os::unix::net::UnixStream;
 use std::{error, fmt, path};
-use httparse::{Response, EMPTY_HEADER};
 // debug
 // use std::collections::HashMap;
 // use std::ffi::OsStr;
@@ -178,7 +178,7 @@ impl Container {
         request_docker_api("POST", &format!("/containers/{id}/restart", id = id), None)?;
 
         Ok(())
-    } 
+    }
 }
 
 fn get_pid_from_container_id(target_container_id: &str) -> Result<u32, Box<dyn std::error::Error>> {
@@ -375,7 +375,7 @@ fn request_docker_api(
         .1
         .trim()
         .to_string();
-    
+
     // Api error catch
     // println!("respo: ```{:?}```", response);
 
@@ -397,8 +397,8 @@ fn request_docker_api(
                     Err(Error::InvalidResponse)?
                 }
             }
-        },
-        None => Err(Error::InvalidResponse)?
+        }
+        None => Err(Error::InvalidResponse)?,
     };
 
     // Case of inspect, response contains some string like:
@@ -440,7 +440,7 @@ pub enum DockerdResponse {
     NoSuchContainer,
     // 500
     ServerError,
-    NotFound
+    NotFound,
 }
 
 impl DockerdResponse {
