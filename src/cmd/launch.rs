@@ -104,8 +104,7 @@ where
                     let detail: Vec<CString> = launch
                         .cmd()
                         .detail_iter()
-                        // TODO: mapないでErrorが生じた場合どのようにするのがベスト？
-                        .map(|d| CString::new(d).unwrap())
+                        .filter_map(|s| CString::new(s).ok())
                         .collect();
 
                     execv(&main, &detail)?;
@@ -143,15 +142,14 @@ fn initialize_setting<DO: Downloader>(
     let dcontainer_base = format!("{}/{}", user.containers(), launch.name());
 
     // rootfsの種類などが記載された設定ファイルsetting.yamlを~/.injesh/containers/に作成する
-    match Path::new(&dcontainer_base).exists() {
-        true => return Err(Error::AlreadyExists)?,
-        false => {
-            fs::create_dir_all(format!("{}/upper", &dcontainer_base))?;
-            let mut setting_file = fs::File::create(format!("{}/setting.yaml", &dcontainer_base))?;
-            // TODO: 設定ファイルの形式を決めてない
-            setting_file.write_all(b"content of setting.yaml")?;
-        }
+    if Path::new(&dcontainer_base).exists() {
+        Err(Error::AlreadyExists)?
     }
+
+    fs::create_dir_all(format!("{}/upper", &dcontainer_base))?;
+    let mut setting_file = fs::File::create(format!("{}/setting.yaml", &dcontainer_base))?;
+    // TODO: 設定ファイルの形式を決めてない
+    setting_file.write_all(b"content of setting.yaml")?;
 
     // /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
     copy_dir_recursively(
@@ -166,7 +164,7 @@ fn initialize_setting<DO: Downloader>(
 /// ```ignore
 /// copy_dir_recursively("/path/to/from", "/path/to/to")
 /// ```
-fn copy_dir_recursively<P, Q>(from: P, to: Q) -> Result<u64, Box<dyn std::error::Error>>
+fn copy_dir_recursively<P, Q>(from: P, to: Q) -> Result<(), Box<dyn std::error::Error>>
 where
     P: AsRef<OsStr> + AsRef<Path>,
     Q: AsRef<OsStr> + AsRef<Path>,
@@ -178,20 +176,10 @@ where
         Err(Error::InputValue)?
     }
 
-    let mut copy_num = 0;
+    let to_name = Path::new(&to).to_str().ok_or(Error::InputValue)?;
     for entry_result in fs::read_dir(from)? {
         let entry = entry_result?;
-        let to_name = Path::new(&to).to_str().ok_or(Error::InputValue)?;
-        let to_path_string = format!(
-            "{}/{}",
-            to_name,
-            entry
-                .file_name()
-                .as_os_str()
-                .to_str()
-                .ok_or(Error::InputValue)?
-        );
-        let to_path = Path::new(&to_path_string);
+        let to_path = Path::new(to_name).join(entry.path().file_name().ok_or(Error::InputValue)?);
 
         if entry.file_type()?.is_dir() {
             fs::create_dir(&to_path)?;
@@ -200,7 +188,7 @@ where
             fs::copy(entry.path(), &to_path)?;
         }
     }
-    Ok(1)
+    Ok(())
 }
 
 /// `/var/lib/docker/overlay2/<HASH_ID>/upper`を`unmount`した後、任意の`rootfs`を挿入したものを`mount`する
@@ -330,7 +318,7 @@ mod tests {
     use std::fs::{self, File};
 
     #[test]
-    #[ignore]
+    // #[ignore]
     fn test_copy_dir_recursively() {
         fs::create_dir_all("./upper/dir1/dir2");
         File::create("./upper/file1");

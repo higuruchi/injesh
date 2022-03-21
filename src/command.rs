@@ -349,7 +349,7 @@ pub struct Cmd {
 impl Cmd {
     pub fn new(mut detail: Box<dyn Iterator<Item = String>>) -> Cmd {
         let main = match detail.next() {
-            Some(cmd) => cmd.to_string(),
+            Some(cmd) => cmd,
             None => "/bin/bash".to_string(),
         };
 
