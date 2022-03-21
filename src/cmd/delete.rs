@@ -38,7 +38,7 @@ impl Delete for DeleteStruct {
         mount_merged_directory(&overlayfs_dirs)?;
 
         // restart container
-        container::Container::restart(injesh_container_name)?;
+        container::Container::restart_from_name(injesh_container_name)?;
 
         // delete own containers directory
         fs::remove_dir_all(container_dir_path).map_err(|why| Error::RemoveFailed(why))?;

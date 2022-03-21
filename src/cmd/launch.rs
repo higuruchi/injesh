@@ -60,7 +60,7 @@ where
     /// forkする
     /// 取得したデバック対象コンテナプロセスIDをもとにsetnsをし、名前空間を同一にする
     /// 与えられた初期実行ファイルをexecする
-    fn launch(&self, launch: &command::Launch<DO>) -> Result<(), Box<dyn std::error::Error>> {
+    fn launch(&self, launch: &mut command::Launch<DO>) -> Result<(), Box<dyn std::error::Error>> {
         // injeshコマンドが初期化されてるかどうかチェック
         utils::check_initialized()?;
 
@@ -70,7 +70,9 @@ where
         // overlyafsのマウントし直し
         remount(launch)?;
 
-        // TODO: デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
+        // デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
+        launch.target_container().restart()?;
+        launch.target_container_mut().update_pid()?;
 
         // デバック対象コンテナのプロセスIDとネームスペースのファイルディスクリプタを取得
         let container_pid = launch.target_container().pid();
@@ -80,7 +82,7 @@ where
             match fork() {
                 // 親プロセスの場合
                 Ok(ForkResult::Parent { child, .. }) => match waitpid(child, None) {
-                    Ok(status) => println!("Child exited {:?}", status),
+                    Ok(status) => println!("Child {:?}", status),
                     Err(_) => Err(Error::Waitpid)?,
                 },
                 // 子プロセス
@@ -99,15 +101,10 @@ where
 
                     // execでプログラムを実行
 
-                    let main = CString::new(launch.cmd().main())?;
-
-                    let detail: Vec<CString> = launch
-                        .cmd()
-                        .detail_iter()
-                        .filter_map(|s| CString::new(s).ok())
-                        .collect();
-
-                    execv(&main, &detail)?;
+                    use std::os::unix::process::CommandExt;
+                    std::process::Command::new(launch.cmd().main())
+                        .args(launch.cmd().detail())
+                        .exec();
                 }
                 Err(_) => return Err(Error::Fork)?,
             }

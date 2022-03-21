@@ -1,4 +1,5 @@
 use form_urlencoded;
+use httparse::{Response, EMPTY_HEADER};
 use serde::Deserialize;
 use std::io::prelude::*;
 use std::os::unix::net::UnixStream;
@@ -44,6 +45,7 @@ pub struct DockerGraphDriverData {
 
 #[derive(Debug)]
 pub struct Container {
+    container_id: String,
     pid: u32,
     lowerdir: path::PathBuf,
     upperdir: path::PathBuf,
@@ -112,6 +114,7 @@ impl Container {
         let graph_driver_data = docker_info.containers.GraphDriver.Data;
 
         Ok(Container {
+            container_id: id.to_string(),
             pid,
             lowerdir: graph_driver_data.LowerDir,
             upperdir: graph_driver_data.UpperDir,
@@ -121,6 +124,10 @@ impl Container {
     }
     pub fn pid(&self) -> u32 {
         self.pid
+    }
+    pub fn update_pid(&mut self) -> Result<u32, Box<dyn std::error::Error>> {
+        self.pid = get_pid_from_container_id(self.container_id())?;
+        Ok(self.pid)
     }
     pub fn lowerdir(&self) -> &std::path::PathBuf {
         &self.lowerdir
@@ -133,6 +140,9 @@ impl Container {
     }
     pub fn workdir(&self) -> &std::path::PathBuf {
         &self.workdir
+    }
+    pub fn container_id(&self) -> &str {
+        &self.container_id
     }
     pub fn convert_name_to_id(name: &str) -> Result<String, Box<dyn std::error::Error>> {
         // as commandline:
@@ -155,7 +165,14 @@ impl Container {
         Ok(id)
     }
 
-    pub fn restart(name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn restart(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let id = self.container_id();
+        request_docker_api("POST", &format!("/containers/{id}/restart", id = id), None)?;
+
+        Ok(())
+    }
+
+    pub fn restart_from_name(name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let id = Self::convert_name_to_id(name)?;
         request_docker_api("POST", &format!("/containers/{id}/restart", id = id), None)?;
 
@@ -177,6 +194,7 @@ fn get_pid_from_container_id(target_container_id: &str) -> Result<u32, Box<dyn s
                 .ok()
         })
         .collect();
+
     // reverse pid_list
     // We can guess the Docker process is being behind in PID order in most cases.
     let pid_list: Vec<u32> = pid_list.iter().rev().cloned().collect();
@@ -341,40 +359,56 @@ fn request_docker_api(
     stream.read_to_string(&mut response)?;
     drop(stream);
 
-    // Exclude response header
-    let mut response = response
+    let header_and_body = response
         .split_once("\r\n\r\n")
-        .ok_or(Error::InvalidResponse)?
-        .1
-        .trim()
-        .to_string();
+        .ok_or(Error::InvalidResponse)?;
+    let header = header_and_body.0.trim().to_string();
+
+    // Exclude response header
+    let mut response_body = header_and_body.1.trim().to_string();
 
     // Api error catch
     // println!("respo: ```{:?}```", response);
-    if response.is_empty() || response == "[]" {
-        Err(Error::ContainerNotFound)?
-    }
-    // Example: {"message":"No such container"}
-    if let Some(message) = catch_error_message(&response)? {
-        Err(Error::ApiResponseError(message))?
-    }
+
+    // check response header
+    // if returned other than 200
+    // return Error
+    let mut headers = [EMPTY_HEADER; 100];
+    let mut res = Response::new(&mut headers[..]);
+    res.parse(header.as_ref())?;
+    match res.code {
+        Some(code) => {
+            match DockerdResponse::new(code) {
+                DockerdResponse::NoError => { /* do nothing */ }
+                _ => {
+                    // Example: {"message":"No such container"}
+                    if let Some(message) = catch_error_message(&response)? {
+                        Err(Error::ApiResponseError(message))?
+                    }
+                    Err(Error::InvalidResponse)?
+                }
+            }
+        }
+        None => Err(Error::InvalidResponse)?,
+    };
 
     // Case of inspect, response contains some string like:
     // 1522\r\n{"Id":...}\n\r\n0
-    let newline_number = response.match_indices('\n').count();
+    let newline_number = response_body.match_indices('\n').count();
     if newline_number > 1 {
-        response = response.split("\n").collect::<Vec<&str>>()[1]
+        response_body = response_body.split("\n").collect::<Vec<&str>>()[1]
             .trim()
             .to_string();
-    } else {
-        response = response;
     }
 
     // wrap with a brath
-    // println!("res: ```{}```", response);
-    let response = format!(r#"{{"containers":{response}}}"#, response = response);
+    // println!("res: ```{}```", response_body);
+    let response_body = format!(
+        r#"{{"containers":{response_body}}}"#,
+        response_body = response_body
+    );
 
-    Ok(response)
+    Ok(response_body)
 }
 
 fn catch_error_message(response: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
@@ -389,4 +423,26 @@ fn catch_error_message(response: &str) -> Result<Option<String>, Box<dyn std::er
     let message: Message = serde_json::from_str(&response)?;
 
     Ok(Some(message.message))
+}
+
+pub enum DockerdResponse {
+    // 204 or 200
+    NoError,
+    // 404
+    NoSuchContainer,
+    // 500
+    ServerError,
+    NotFound,
+}
+
+impl DockerdResponse {
+    fn new(response_id: u16) -> DockerdResponse {
+        match response_id {
+            200 => DockerdResponse::NoError,
+            204 => DockerdResponse::NoError,
+            404 => DockerdResponse::NoSuchContainer,
+            500 => DockerdResponse::ServerError,
+            _ => DockerdResponse::NotFound,
+        }
+    }
 }

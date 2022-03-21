@@ -24,7 +24,7 @@ where
 }
 
 pub trait Handler {
-    fn run(&self);
+    fn run(&mut self);
 }
 
 impl<'a, I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
@@ -36,8 +36,8 @@ where
     D: Delete,
     DO: Downloader,
 {
-    fn run(&self) {
-        match &self.command {
+    fn run(&mut self) {
+        match &mut self.command {
             // TODO: エラーハンドリング
             SubCommand::Init(init_args) => match self.init.init(init_args) {
                 Ok(_) => println!("Initialized!"),

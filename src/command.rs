@@ -138,6 +138,10 @@ where
         &self.target_container
     }
 
+    pub fn target_container_mut(&mut self) -> &mut container::Container {
+        &mut self.target_container
+    }
+
     pub fn rootfs_option(&self) -> &RootFSOption<D> {
         &self.rootfs_option
     }
@@ -353,7 +357,7 @@ impl Cmd {
             None => "/bin/bash".to_string(),
         };
 
-        let mut detail_vec = vec![main.clone()];
+        let mut detail_vec: Vec<String> = Vec::new();
         for d in detail {
             detail_vec.push(d.to_string())
         }
