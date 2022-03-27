@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_user_architecture() {
         let userinfo = User::new();
-        assert_eq!(userinfo.unwrap().architecture(), &CpuArchitecture::Amd64);
+        assert_eq!(userinfo.unwrap().architecture(), CpuArchitecture::Amd64);
     }
     #[test]
     fn test_user_architecture_display() {
