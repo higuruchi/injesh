@@ -116,7 +116,7 @@ fn check_rootfs(
         let download = image_downloader_lxd::Downloader::new(
             distri_and_version.0,
             distri_and_version.1,
-            "amd64",
+            user.architecture(),
         )?;
         let image = image::Image::new(distri_and_version.0, distri_and_version.1, user, download)?;
         rootfs = RootFSOption::RootfsImage(image);
