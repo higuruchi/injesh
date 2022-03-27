@@ -1,4 +1,4 @@
-use crate::image_downloader;
+use crate::{image_downloader, user};
 use chrono::NaiveDateTime;
 use regex::Regex;
 use std::cmp::Ordering;
@@ -70,7 +70,7 @@ impl Downloader {
     pub fn new(
         distribution: &str,
         version: &str,
-        arch: &str,
+        arch: user::CpuArchitecture,
     ) -> Result<impl image_downloader::Downloader, Box<dyn std::error::Error>> {
         let image_meta = ImageMeta::new(distribution, version, arch)?;
 
@@ -174,7 +174,7 @@ struct ImageMeta {
     /// バージョン
     version: String,
     /// CPUアーキテクチャ
-    arch: String,
+    arch: user::CpuArchitecture,
     /// rootfsイメージがアップロードされた時間
     time: NaiveDateTime,
     /// rootfsイメージへのURLの一部
@@ -191,7 +191,7 @@ impl ImageMeta {
     fn new(
         distri: &str,
         version: &str,
-        arch: &str,
+        arch: user::CpuArchitecture,
     ) -> Result<Vec<ImageMeta>, Box<dyn std::error::Error>> {
         let resp = reqwest::blocking::get(IMAGE_META_URL)?.text()?;
         let image_info: Vec<&str> = resp.split('\n').collect();
@@ -214,13 +214,13 @@ impl ImageMeta {
                 if image_parsed_info[0] == distri &&
                 image_parsed_info[1] == version &&
                 // TODO: ユーザのアーキテクチャから分岐
-                image_parsed_info[2] == "amd64" &&
+                image_parsed_info[2] == arch.to_string() &&
                 image_parsed_info[3] == "default"
                 {
                     Some(ImageMeta {
                         distribution: image_parsed_info[0].to_string(),
                         version: image_parsed_info[1].to_string(),
-                        arch: image_parsed_info[2].to_string(),
+                        arch: arch,
                         time: time,
                         path: image_parsed_info[5].to_string(),
                     })
@@ -237,8 +237,8 @@ impl ImageMeta {
         &self.distribution
     }
 
-    fn arch(&self) -> &str {
-        &self.arch
+    fn arch(&self) -> user::CpuArchitecture {
+        self.arch
     }
 
     fn time(&self) -> &NaiveDateTime {
@@ -262,8 +262,9 @@ mod tests {
     #[ignore]
     fn test_download_rootfs() {
         use crate::image_downloader::Downloader as DownloaderTrait;
+        let arch = user::CpuArchitecture::Amd64;
 
-        let image_downloader_lxd = Downloader::new("alpine", "3.15", "arm64").unwrap();
+        let image_downloader_lxd = Downloader::new("alpine", "3.15", arch).unwrap();
         image_downloader_lxd
             .download_rootfs(Path::new("/tmp/rootfs.tar.xz"))
             .unwrap();
@@ -275,8 +276,9 @@ mod tests {
     #[ignore]
     fn download_rootfs_hash() {
         use crate::image_downloader::Downloader as DownloaderTrait;
+        let arch = user::CpuArchitecture::Amd64;
 
-        let image_downloader_lxd = Downloader::new("alpine", "3.15", "arm64").unwrap();
+        let image_downloader_lxd = Downloader::new("alpine", "3.15", arch).unwrap();
         image_downloader_lxd
             .download_rootfs_hash(Path::new("/tmp/rootfs.tar.xz.asc"))
             .unwrap();
@@ -288,8 +290,9 @@ mod tests {
     #[ignore]
     fn test_check_rootfs_newest() {
         use crate::image_downloader::Downloader as DownloaderTrait;
+        let arch = user::CpuArchitecture::Amd64;
 
-        let image_downloader_lxd = Downloader::new("alpine", "3.15", "arm64").unwrap();
+        let image_downloader_lxd = Downloader::new("alpine", "3.15", arch).unwrap();
         image_downloader_lxd
             .check_rootfs_newest(Path::new("/tmp/rootfs.tar.xz.asc"))
             .unwrap();

@@ -315,23 +315,23 @@ mod tests {
     use std::fs::{self, File};
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_copy_dir_recursively() {
-        fs::create_dir_all("./upper/dir1/dir2");
-        File::create("./upper/file1");
-        File::create("./upper/file2");
-        File::create("./upper/dir1/file3");
-        File::create("./upper/dir1/dir2/file3");
-        fs::create_dir("./upper_copy");
+        fs::create_dir_all("./upper/dir1/dir2").unwrap();
+        File::create("./upper/file1").unwrap();
+        File::create("./upper/file2").unwrap();
+        File::create("./upper/dir1/file3").unwrap();
+        File::create("./upper/dir1/dir2/file3").unwrap();
+        fs::create_dir("./upper_copy").unwrap();
 
         match copy_dir_recursively("./upper", "./upper_copy") {
-            Ok(num) => {
-                fs::remove_dir_all("./upper");
-                fs::remove_dir_all("./upper_copy");
+            Ok(_) => {
+                fs::remove_dir_all("./upper").unwrap();
+                fs::remove_dir_all("./upper_copy").unwrap();
             }
-            Err(e) => {
-                fs::remove_dir_all("./upper");
-                fs::remove_dir_all("./upper_copy");
+            Err(_) => {
+                fs::remove_dir_all("./upper").unwrap();
+                fs::remove_dir_all("./upper_copy").unwrap();
             }
         };
     }

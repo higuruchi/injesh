@@ -8,55 +8,13 @@ pub struct User {
     architecture: CpuArchitecture,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum CpuArchitecture {
-    Aarch64,
-    Amd64,
-    Armhf,
-}
-
-impl fmt::Display for CpuArchitecture {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            CpuArchitecture::Aarch64 => write!(f, "aarch64"),
-            CpuArchitecture::Amd64 => write!(f, "amd64"),
-            CpuArchitecture::Armhf => write!(f, "armhf"),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum Error {
-    HomeNotFound,
-    UnsupportedArchitecture,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::HomeNotFound => write!(f, "Home not found!"),
-            Error::UnsupportedArchitecture => write!(f, "cpu architecture unsupported"),
-        }
-    }
-}
-
-impl error::Error for Error {}
-
 impl User {
     pub fn new() -> Result<User, Box<dyn std::error::Error>> {
         let injesh_homedir = match env::var("HOME") {
             Ok(home) => home + "/.injesh",
             Err(_) => return Err(Error::HomeNotFound)?,
         };
-
-        let uname = nix::sys::utsname::uname();
-        // TODO: add more architectures
-        let architecture = match uname.machine() {
-            "x86_64" => CpuArchitecture::Amd64,
-            "aarch64" => CpuArchitecture::Aarch64,
-            "armv7l" => CpuArchitecture::Armhf,
-            _ => Err(Error::UnsupportedArchitecture)?,
-        };
+        let architecture = CpuArchitecture::new()?;
 
         Ok(User {
             injesh_home: format!("{}", &injesh_homedir),
@@ -75,10 +33,59 @@ impl User {
     pub fn containers(&self) -> &str {
         &self.containers
     }
-    pub fn architecture(&self) -> &CpuArchitecture {
-        &self.architecture
+    pub fn architecture(&self) -> CpuArchitecture {
+        self.architecture
     }
 }
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum CpuArchitecture {
+    Aarch64,
+    Amd64,
+    Armhf,
+}
+
+impl fmt::Display for CpuArchitecture {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CpuArchitecture::Aarch64 => write!(f, "aarch64"),
+            CpuArchitecture::Amd64 => write!(f, "amd64"),
+            CpuArchitecture::Armhf => write!(f, "armhf"),
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::HomeNotFound => write!(f, "Home not found!"),
+            Error::UnsupportedArchitecture => write!(f, "cpu architecture unsupported"),
+        }
+    }
+}
+
+impl CpuArchitecture {
+    fn new() -> Result<CpuArchitecture, Box<dyn std::error::Error>> {
+        let uname = nix::sys::utsname::uname();
+        // TODO: add more architectures
+        let architecture = match uname.machine() {
+            "x86_64" => CpuArchitecture::Amd64,
+            "aarch64" => CpuArchitecture::Aarch64,
+            "armv7l" => CpuArchitecture::Armhf,
+            _ => Err(Error::UnsupportedArchitecture)?,
+        };
+
+        Ok(architecture)
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    HomeNotFound,
+    UnsupportedArchitecture,
+}
+
+impl error::Error for Error {}
 
 mod tests {
     use super::*;
