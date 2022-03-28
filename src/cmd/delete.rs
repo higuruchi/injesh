@@ -38,7 +38,8 @@ impl Delete for DeleteStruct {
         mount_merged_directory(&overlayfs_dirs)?;
 
         // restart container
-        let docker_container_id = container::Container::convert_injesh_name_to_docker_id(injesh_container_name)?;
+        let docker_container_id =
+            container::Container::convert_injesh_name_to_docker_id(injesh_container_name)?;
         container::Container::new(&docker_container_id)?.restart()?;
 
         // delete own containers directory
@@ -116,7 +117,10 @@ fn mount_merged_directory(
     Ok(())
 }
 
-fn copy_dir_recursively(src: &std::path::PathBuf, dest: &std::path::PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn copy_dir_recursively(
+    src: &std::path::PathBuf,
+    dest: &std::path::PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
     let src_pathbuf = src.clone();
     let dest_pathbuf = dest.clone();
     let src_path = src.as_path();
@@ -132,7 +136,11 @@ fn copy_dir_recursively(src: &std::path::PathBuf, dest: &std::path::PathBuf) -> 
     for entry_result in fs::read_dir(src)? {
         let entry = entry_result?;
         let entry_path = entry.path();
-        let dest_entry_path = dest_path.join(&entry_path.file_name().ok_or(Error::InvalidPath(entry_path.clone()))?);
+        let dest_entry_path = dest_path.join(
+            &entry_path
+                .file_name()
+                .ok_or(Error::InvalidPath(entry_path.clone()))?,
+        );
 
         if entry.file_type()?.is_dir() {
             fs::create_dir(&dest_path)?;

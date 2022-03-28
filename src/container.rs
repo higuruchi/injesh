@@ -180,15 +180,19 @@ impl Container {
         Ok(())
     }
 
-    pub fn convert_injesh_name_to_docker_id(injesh_container_name: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn convert_injesh_name_to_docker_id(
+        injesh_container_name: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // read `settings.yaml`
-        let settings_file_path = std::path::Path::new(crate::user::User::new()?.containers()).join(injesh_container_name).join("settings.yaml");
+        let settings_file_path = std::path::Path::new(crate::user::User::new()?.containers())
+            .join(injesh_container_name)
+            .join("settings.yaml");
 
         // extract `docker_container_id` from yaml
         let settings_yaml_str = std::fs::read_to_string(settings_file_path)?;
         let settings_yaml: SettingsYaml = serde_yaml::from_str(&settings_yaml_str)?;
         let docker_container_id = settings_yaml.docker_container_id;
-        
+
         Ok(docker_container_id)
     }
 }
@@ -466,7 +470,6 @@ impl DockerdResponse {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
