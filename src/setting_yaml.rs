@@ -1,12 +1,12 @@
 use crate::setting::{Reader, Setting, Shell, Writer};
+use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize, Serializer};
-use serde::ser::{SerializeStruct};
 use std::str;
 
-use std::path::PathBuf;
-use std::{error, fmt};
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
+use std::path::PathBuf;
+use std::{error, fmt};
 
 #[derive(Debug)]
 pub enum Error {
@@ -60,22 +60,27 @@ impl Reader for YamlReaderWriter {
     }
 }
 
-
 impl Writer for YamlReaderWriter {
     fn write(&self, setting: &Setting) -> Result<(), Box<dyn std::error::Error>> {
-        let commands: Vec<String> = setting.commands().iter().map(|command| {
-            command.to_string()
-        }).collect();
+        let commands: Vec<String> = setting
+            .commands()
+            .iter()
+            .map(|command| command.to_string())
+            .collect();
         let yaml_setting = YamlSetting {
             docker_container_id: setting.docker_container_id().to_string(),
             shell: setting.shell().to_string(),
-            commands: commands
+            commands: commands,
         };
 
         let yaml_string = serde_yaml::to_string(&yaml_setting)?;
 
-        let mut setting_file = OpenOptions::new().write(true).create(true).read(false).open(&self.setting_file_path)?;
-       
+        let mut setting_file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .read(false)
+            .open(&self.setting_file_path)?;
+
         setting_file.write_all(yaml_string.as_bytes())?;
 
         Ok(())
@@ -101,7 +106,7 @@ impl Serialize for YamlSetting {
 //     #[test]
 //     fn test_read() {
 //         let yaml_reader = YamlReader::new();
-//         let from = 
+//         let from =
 // "docker_container_id: abcd
 // shell: bash
 // commands:
@@ -133,7 +138,7 @@ impl Serialize for YamlSetting {
 //   - ls
 //   - cat
 // ";
-        
+
 //         let mut writed_buf: Vec<u8> = Vec::new();
 //         yaml_writer.write(&mut writed_buf, &setting).unwrap();
 //         let yaml_writed_string = str::from_utf8(&writed_buf).unwrap();
@@ -144,7 +149,7 @@ impl Serialize for YamlSetting {
 // //     #[test]
 // //     fn test_read_unexpected_shell() {
 // //         let yaml_reader = YamlReader::new();
-// //         let from = 
+// //         let from =
 // // "docker_container_id: abcd
 // // shell: hogehoge
 // // commands:

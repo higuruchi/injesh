@@ -1,5 +1,5 @@
-use crate::{command, setting};
 use crate::image_downloader::Downloader;
+use crate::{command, setting};
 
 pub trait Launch<DO>
 where

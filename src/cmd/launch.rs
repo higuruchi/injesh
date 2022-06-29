@@ -1,7 +1,7 @@
 use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
 use crate::launch::Launch;
-use crate::{user, setting, utils};
+use crate::{setting, user, utils};
 use std::ffi::{CString, OsStr};
 use std::fs::File;
 use std::io::prelude::*;

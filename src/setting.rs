@@ -20,10 +20,7 @@ pub trait Reader {
 }
 
 pub trait Writer {
-    fn write(
-        &self,
-        setting: &Setting,
-    ) -> Result<(), Box<dyn std::error::Error>>;
+    fn write(&self, setting: &Setting) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[derive(Debug, PartialEq)]
@@ -33,7 +30,7 @@ pub struct SettingHandler<RW: Reader + Writer> {
 }
 
 impl<RW: Reader + Writer> SettingHandler<RW> {
-    pub fn new (
+    pub fn new(
         docker_container_id: &str,
         shell: Shell,
         commands: Vec<String>,
@@ -54,9 +51,7 @@ impl<RW: Reader + Writer> SettingHandler<RW> {
         Ok(())
     }
 
-    fn read(
-        &mut self,
-    ) -> Result<&Option<Setting>, Box<dyn std::error::Error>> {
+    fn read(&mut self) -> Result<&Option<Setting>, Box<dyn std::error::Error>> {
         match self.setting {
             Some(ref setting) => Ok(&self.setting),
             None => {
@@ -76,15 +71,11 @@ pub struct Setting {
 }
 
 impl Setting {
-    pub fn new(
-        docker_container_id: &str,
-        shell: Shell,
-        commands: Vec<String>,
-    ) -> Self {
+    pub fn new(docker_container_id: &str, shell: Shell, commands: Vec<String>) -> Self {
         Setting {
             docker_container_id: docker_container_id.to_string(),
             shell: shell,
-            commands: commands
+            commands: commands,
         }
     }
 

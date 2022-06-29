@@ -28,7 +28,7 @@ pub trait Handler {
     fn run(&mut self);
 }
 
-impl< I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
+impl<I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
 where
     I: Init,
     L: List,
