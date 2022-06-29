@@ -71,7 +71,7 @@ impl Downloader {
         distribution: &str,
         version: &str,
         arch: user::CpuArchitecture,
-    ) -> Result<impl image_downloader::Downloader, Box<dyn std::error::Error>> {
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let image_meta = ImageMeta::new(distribution, version, arch)?;
 
         Ok(Downloader {

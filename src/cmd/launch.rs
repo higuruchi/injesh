@@ -1,8 +1,7 @@
 use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
 use crate::launch::Launch;
-use crate::user;
-use crate::utils;
+use crate::{user, setting, utils};
 use std::ffi::{CString, OsStr};
 use std::fs::File;
 use std::io::prelude::*;
@@ -145,7 +144,6 @@ fn initialize_setting<DO: Downloader>(
 
     fs::create_dir_all(format!("{}/upper", &dcontainer_base))?;
     let mut setting_file = fs::File::create(format!("{}/setting.yaml", &dcontainer_base))?;
-    // TODO: 設定ファイルの形式を決めてない
     setting_file.write_all(b"content of setting.yaml")?;
 
     // /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする

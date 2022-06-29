@@ -1,4 +1,4 @@
-use crate::command;
+use crate::{command, setting};
 use crate::image_downloader::Downloader;
 
 pub trait Launch<DO>

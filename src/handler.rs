@@ -5,6 +5,7 @@ use crate::image_downloader::Downloader;
 use crate::init::Init;
 use crate::launch::Launch;
 use crate::list::List;
+use crate::setting;
 
 pub struct HandlerStruct<I, L, LA, E, D, DO>
 where
@@ -27,7 +28,7 @@ pub trait Handler {
     fn run(&mut self);
 }
 
-impl<'a, I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
+impl< I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
 where
     I: Init,
     L: List,
@@ -64,7 +65,7 @@ where
     }
 }
 
-impl<'a, I, L, LA, E, D, DO> HandlerStruct<I, L, LA, E, D, DO>
+impl<I, L, LA, E, D, DO> HandlerStruct<I, L, LA, E, D, DO>
 where
     I: Init,
     L: List,

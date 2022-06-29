@@ -1,13 +1,12 @@
 use crate::command::{
     self, Cmd, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption,
-    SubCommand,
+    SubCommand
 };
 use crate::{container, image, image_downloader, image_downloader_lxd, user};
 use clap::{Args, Parser, Subcommand};
-use regex::Regex;
 use std::path::PathBuf;
 
-pub fn parse<'a>(
+pub fn parse(
 ) -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
     let args: Cli = Cli::parse();
     match args.action {
@@ -24,12 +23,10 @@ pub fn parse<'a>(
 }
 
 fn initialize_delete(delete: DeleteArgs) -> Result<Delete, Box<dyn std::error::Error>> {
-    use command::delete_error::Error;
     Ok(Delete::new(delete.name))
 }
 
 fn initialize_exec(exec: ExecArgs) -> Result<Exec, Box<dyn std::error::Error>> {
-    use command::exec_error::Error;
     Ok(Exec::new(exec.name, exec.cmd))
 }
 
@@ -60,7 +57,6 @@ fn initialize_init() -> Result<Init, Box<dyn std::error::Error>> {
 fn initialize_launch(
     launch: LaunchArgs,
 ) -> Result<Launch<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
-    use command::launch_error::Error;
 
     let rootfs = check_rootfs(
         launch.opt_rootfs.as_ref().map(|r| r.as_str()),
@@ -71,12 +67,12 @@ fn initialize_launch(
 
     let container = container::Container::new(&launch.container_id_or_name)?;
 
-    Ok(Launch::new(
+    Launch::new(
         container,
         rootfs,
         String::from(launch.name),
         Cmd::new(Box::new(launch.cmd.into_iter())),
-    )?)
+    )
 }
 
 fn initialize_list() -> Result<List, Box<dyn std::error::Error>> {
