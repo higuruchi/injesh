@@ -4,6 +4,8 @@ mod container;
 pub mod handler;
 mod image;
 pub mod parser;
+pub mod setting;
+pub mod setting_yaml;
 mod user;
 mod utils;
 
