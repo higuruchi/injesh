@@ -1,12 +1,12 @@
 use crate::setting::{Reader, Setting, Shell, Writer};
+use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize, Serializer};
-use serde::ser::{SerializeStruct};
 use std::str;
 
-use std::path::{PathBuf, Path};
-use std::{error, fmt};
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
+use std::path::{Path, PathBuf};
+use std::{error, fmt};
 
 #[derive(Debug)]
 pub enum Error {
@@ -68,22 +68,27 @@ impl Reader for YamlReaderWriter {
     }
 }
 
-
 impl Writer for YamlReaderWriter {
     fn write(&self, setting: &Setting) -> Result<(), Box<dyn std::error::Error>> {
-        let commands: Vec<String> = setting.commands().iter().map(|command| {
-            command.to_string()
-        }).collect();
+        let commands: Vec<String> = setting
+            .commands()
+            .iter()
+            .map(|command| command.to_string())
+            .collect();
         let yaml_setting = YamlSetting {
             docker_container_id: setting.docker_container_id().to_string(),
             shell: setting.shell().to_string(),
-            commands: commands
+            commands: commands,
         };
 
         let yaml_string = serde_yaml::to_string(&yaml_setting)?;
 
-        let mut setting_file = OpenOptions::new().write(true).create(true).read(false).open(&self.setting_file_path)?;
-       
+        let mut setting_file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .read(false)
+            .open(&self.setting_file_path)?;
+
         setting_file.write_all(yaml_string.as_bytes())?;
 
         Ok(())
@@ -103,65 +108,74 @@ impl Serialize for YamlSetting {
     }
 }
 
-// mod tests {
-//     use super::*;
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_read() {
-//         let yaml_reader = YamlReader::new();
-//         let from = 
-// "docker_container_id: abcd
-// shell: bash
-// commands:
-//   - ls
-//   - cat";
-//         let yaml_setting = Setting{
-//             docker_container_id: String::from("abcd"),
-//             shell: Shell::Bash,
-//             commands: vec![String::from("ls"), String::from("cat")],
-//         };
-//         let parsed_yaml_setting = yaml_reader.read(from.as_bytes()).unwrap();
+    #[test]
+    fn test_read() {
+        let setting_file_path = "/tmp/setting_read_test.yaml";
+        let from = "---
+qqqdocker_container_id: abcd
+shell: bash
+commands:
+  - ls
+  - cat";
+        let mut setting_file = OpenOptions::new()
+            .write(true)
+            .read(true)
+            .create(true)
+            .open(setting_file_path)
+            .unwrap();
+        setting_file.write_all(from.as_bytes()).unwrap();
 
-//         assert_eq!(parsed_yaml_setting, yaml_setting);
-//     }
+        let yaml_rw = YamlReaderWriter::new(&PathBuf::from(setting_file_path));
+        let commands = vec![String::from("ls"), String::from("cat")];
+        let yaml_setting = Setting::new("abcd", Shell::Bash, &commands);
+        let parsed_yaml_setting = yaml_rw.read().unwrap();
 
-//     #[test]
-//     fn test_write() {
-//         let yaml_writer = YamlWriter::new();
-//         let setting = Setting{
-//             docker_container_id: String::from("abcd"),
-//             shell: Shell::Bash,
-//             commands: vec![String::from("ls"), String::from("cat")],
-//         };
-//         let to =
-// "---
-// docker_container_id: abcd
-// shell: bash
-// commands:
-//   - ls
-//   - cat
-// ";
-        
-//         let mut writed_buf: Vec<u8> = Vec::new();
-//         yaml_writer.write(&mut writed_buf, &setting).unwrap();
-//         let yaml_writed_string = str::from_utf8(&writed_buf).unwrap();
+        assert_eq!(parsed_yaml_setting, yaml_setting);
+    }
 
-//         assert_eq!(to, yaml_writed_string);
-//     }
+    #[test]
+    fn test_write() {
+        let setting_file_path = "/tmp/setting_write_test.yaml";
+        let yaml_rw = YamlReaderWriter::new(&PathBuf::from(setting_file_path));
+        let commands = vec![String::from("ls"), String::from("cat")];
+        let yaml_setting = Setting::new("abcd", Shell::Bash, &commands);
+        yaml_rw.write(&yaml_setting).unwrap();
 
-// //     #[test]
-// //     fn test_read_unexpected_shell() {
-// //         let yaml_reader = YamlReader::new();
-// //         let from = 
-// // "docker_container_id: abcd
-// // shell: hogehoge
-// // commands:
-// //     - ls
-// //     - cat";
-// //         let parsed_yaml_setting = yaml_reader.read(from.as_bytes());
-// //         match parsed_yaml_setting {
-// //             Ok(_) => panic!(),
-// //             Err(e) => assert_eq!(e, Error::UnExpectedShell)
-// //         }
-// //     }
-// }
+        let to = "---
+docker_container_id: abcd
+shell: bash
+commands:
+  - ls
+  - cat
+";
+        let mut setting_file = OpenOptions::new()
+            .write(false)
+            .read(true)
+            .create(false)
+            .open(setting_file_path)
+            .unwrap();
+        let mut write_test_buf: [u8; 67] = [0; 67];
+        setting_file.read(&mut write_test_buf).unwrap();
+
+        assert_eq!(to, str::from_utf8(&write_test_buf).unwrap());
+    }
+
+    //     #[test]
+    //     fn test_read_unexpected_shell() {
+    //         let yaml_reader = YamlReader::new();
+    //         let from =
+    // "docker_container_id: abcd
+    // shell: hogehoge
+    // commands:
+    //     - ls
+    //     - cat";
+    //         let parsed_yaml_setting = yaml_reader.read(from.as_bytes());
+    //         match parsed_yaml_setting {
+    //             Ok(_) => panic!(),
+    //             Err(e) => assert_eq!(e, Error::UnExpectedShell)
+    //         }
+    //     }
+}
