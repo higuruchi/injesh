@@ -1,6 +1,5 @@
 use crate::command::{self, delete_error::Error};
 use crate::container;
-use crate::delete::Delete;
 use crate::user;
 use crate::utils;
 
@@ -9,8 +8,8 @@ use std::{fs, path};
 
 pub struct DeleteStruct;
 
-impl Delete for DeleteStruct {
-    fn delete(&self, delete: &command::Delete) -> Result<(), Box<dyn std::error::Error>> {
+impl DeleteStruct {
+    pub fn delete(&self, delete: &command::Delete) -> Result<(), Box<dyn std::error::Error>> {
         utils::check_initialized()?;
         let injesh_container_name = delete.name();
 
@@ -45,10 +44,8 @@ impl Delete for DeleteStruct {
 
         Ok(())
     }
-}
 
-impl DeleteStruct {
-    pub fn new() -> impl Delete {
+    pub fn new() -> DeleteStruct {
         DeleteStruct
     }
 }

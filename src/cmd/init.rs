@@ -1,12 +1,15 @@
 use crate::command;
 use crate::command::init_error::Error;
-use crate::init::Init;
 use std::fs;
 
 pub struct InitStruct {}
 
-impl Init for InitStruct {
-    fn init(&self, init: &command::Init) -> Result<(), Box<dyn std::error::Error>> {
+impl InitStruct {
+    pub fn new() -> InitStruct {
+        InitStruct {}
+    }
+
+    pub fn init(&self, init: &command::Init) -> Result<(), Box<dyn std::error::Error>> {
         let mut err_flg = 0;
 
         let user_dirs = init.user();
@@ -29,11 +32,5 @@ impl Init for InitStruct {
         }
 
         Ok(())
-    }
-}
-
-impl InitStruct {
-    pub fn new() -> impl Init {
-        InitStruct {}
     }
 }

@@ -1,13 +1,17 @@
 use crate::command::{
     self, Cmd, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption,
-    SubCommand
+    SubCommand,
 };
-use crate::{container, image, image_downloader, image_downloader_lxd, user, setting, setting_yaml};
+use crate::{
+    container, image, image_downloader, image_downloader_lxd, setting, setting_yaml, user,
+};
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
-pub fn parse(
-) -> Result<SubCommand<impl image_downloader::Downloader, impl setting::Reader + setting::Writer>, Box<dyn std::error::Error>> {
+pub fn parse() -> Result<
+    SubCommand<impl image_downloader::Downloader, impl setting::Reader + setting::Writer>,
+    Box<dyn std::error::Error>,
+> {
     let args: Cli = Cli::parse();
     match args.action {
         Action::Delete(delete) => Ok(SubCommand::Delete(initialize_delete(delete)?)),
@@ -56,8 +60,10 @@ fn initialize_init() -> Result<Init, Box<dyn std::error::Error>> {
 
 fn initialize_launch(
     launch: LaunchArgs,
-) -> Result<Launch<impl image_downloader::Downloader, impl setting::Reader + setting::Writer>, Box<dyn std::error::Error>> {
-
+) -> Result<
+    Launch<impl image_downloader::Downloader, impl setting::Reader + setting::Writer>,
+    Box<dyn std::error::Error>,
+> {
     let rootfs = check_rootfs(
         launch.opt_rootfs.as_ref().map(|r| r.as_str()),
         launch.opt_rootfs_image.as_ref().map(|r| r.as_str()),
@@ -77,7 +83,7 @@ fn initialize_launch(
         rootfs,
         String::from(launch.name),
         Cmd::new(Box::new(launch.cmd.into_iter())),
-        setting_yaml_reader_writer
+        setting_yaml_reader_writer,
     )
 }
 

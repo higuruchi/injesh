@@ -1,4 +1,4 @@
-use crate::{container, image, image_downloader, user, setting};
+use crate::{container, image, image_downloader, setting, user};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -13,7 +13,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::CommandError => write!(f, "command: sub command error"),
-            Error::NotInitialized => write!(f, "command: not initialized")
+            Error::NotInitialized => write!(f, "command: not initialized"),
         }
     }
 }
@@ -135,7 +135,7 @@ where
             rootfs_option: rootfs_option,
             name: name,
             cmd: cmd,
-            setting_handler: setting_handler
+            setting_handler: setting_handler,
         })
     }
 

@@ -1,7 +1,6 @@
 use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
-use crate::launch::Launch;
-use crate::{user, setting, utils};
+use crate::{setting, user, utils};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::path::Path;
@@ -49,11 +48,7 @@ impl error::Error for Error {}
 
 pub struct LaunchStruct;
 
-impl<DO, RW> Launch<DO, RW> for LaunchStruct
-where
-    DO: Downloader,
-    RW: setting::Reader + setting::Writer,
-{
+impl LaunchStruct {
     /// rootfsの種類などが記載された設定ファイルsetting.yamlを~/.injesh/containers/に作成する
     /// /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
     /// デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
@@ -61,7 +56,10 @@ where
     /// forkする
     /// 取得したデバック対象コンテナプロセスIDをもとにsetnsをし、名前空間を同一にする
     /// 与えられた初期実行ファイルをexecする
-    fn launch(&self, launch: &mut command::Launch<DO, RW>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn launch<DO: Downloader, RW: setting::Reader + setting::Writer>(
+        &self,
+        launch: &mut command::Launch<DO, RW>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // injeshコマンドが初期化されてるかどうかチェック
         utils::check_initialized()?;
 
@@ -113,14 +111,8 @@ where
 
         Ok(())
     }
-}
 
-impl LaunchStruct {
-    pub fn new<DO, RW>() -> impl Launch<DO, RW>
-    where
-        DO: Downloader,
-        RW: setting::Reader + setting::Writer,
-    {
+    pub fn new() -> LaunchStruct {
         LaunchStruct
     }
 }
@@ -147,7 +139,9 @@ fn initialize_setting<DO: Downloader, RW: setting::Reader + setting::Writer>(
 
     fs::create_dir_all(format!("{}/upper", &dcontainer_base))?;
     let target_container_id = launch.target_container().container_id().to_string();
-    launch.setting_handler_mut().init(&target_container_id, setting::Shell::Bash, &[]);
+    launch
+        .setting_handler_mut()
+        .init(&target_container_id, setting::Shell::Bash, &[]);
     launch.setting_handler().write()?;
 
     // /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
@@ -191,7 +185,9 @@ where
 }
 
 /// `/var/lib/docker/overlay2/<HASH_ID>/upper`を`unmount`した後、任意の`rootfs`を挿入したものを`mount`する
-fn remount<DO: Downloader, RW: setting::Reader + setting::Writer>(launch: &command::Launch<DO, RW>) -> Result<(), Box<dyn std::error::Error>> {
+fn remount<DO: Downloader, RW: setting::Reader + setting::Writer>(
+    launch: &command::Launch<DO, RW>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let rootfs_path = match launch.rootfs_option() {
         RootFSOption::RootfsImage(image) => {
             match image.check_rootfs_newest() {
