@@ -115,11 +115,12 @@ mod tests {
     fn test_read() {
         let setting_file_path = "/tmp/setting_read_test.yaml";
         let from = "---
-qqqdocker_container_id: abcd
+docker_container_id: abcd
 shell: bash
 commands:
   - ls
-  - cat";
+  - cat
+";
         let mut setting_file = OpenOptions::new()
             .write(true)
             .read(true)
