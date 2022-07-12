@@ -1,40 +1,34 @@
 use crate::command::SubCommand;
-use crate::delete::Delete;
-use crate::exec::Exec;
 use crate::image_downloader::Downloader;
-use crate::init::Init;
-use crate::launch::Launch;
-use crate::list::List;
+use crate::setting;
 
-pub struct HandlerStruct<I, L, LA, E, D, DO>
+use crate::cmd::delete::DeleteStruct;
+use crate::cmd::exec::ExecStruct;
+use crate::cmd::init::InitStruct;
+use crate::cmd::launch::LaunchStruct;
+use crate::cmd::list::ListStruct;
+
+pub struct HandlerStruct<DO, RW>
 where
-    I: Init,
-    L: List,
-    LA: Launch<DO>,
-    E: Exec,
-    D: Delete,
     DO: Downloader,
+    RW: setting::Reader + setting::Writer,
 {
-    command: SubCommand<DO>,
-    init: I,
-    list: L,
-    launch: LA,
-    exec: E,
-    delete: D,
+    command: SubCommand<DO, RW>,
+    init: InitStruct,
+    list: ListStruct,
+    launch: LaunchStruct,
+    exec: ExecStruct,
+    delete: DeleteStruct,
 }
 
 pub trait Handler {
     fn run(&mut self);
 }
 
-impl<'a, I, L, LA, E, D, DO> Handler for HandlerStruct<I, L, LA, E, D, DO>
+impl<DO, RW> Handler for HandlerStruct<DO, RW>
 where
-    I: Init,
-    L: List,
-    LA: Launch<DO>,
-    E: Exec,
-    D: Delete,
     DO: Downloader,
+    RW: setting::Reader + setting::Writer,
 {
     fn run(&mut self) {
         match &mut self.command {
@@ -64,22 +58,18 @@ where
     }
 }
 
-impl<'a, I, L, LA, E, D, DO> HandlerStruct<I, L, LA, E, D, DO>
+impl<DO, RW> HandlerStruct<DO, RW>
 where
-    I: Init,
-    L: List,
-    LA: Launch<DO>,
-    E: Exec,
-    D: Delete,
     DO: Downloader,
+    RW: setting::Reader + setting::Writer,
 {
     pub fn new(
-        command: SubCommand<DO>,
-        init: I,
-        list: L,
-        launch: LA,
-        exec: E,
-        delete: D,
+        command: SubCommand<DO, RW>,
+        init: InitStruct,
+        list: ListStruct,
+        launch: LaunchStruct,
+        exec: ExecStruct,
+        delete: DeleteStruct,
     ) -> impl Handler {
         HandlerStruct {
             command: command,

@@ -1,4 +1,4 @@
-use crate::{container, image, image_downloader, user};
+use crate::{container, image, image_downloader, setting, user};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -12,7 +12,8 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            CommandError => write!(f, "Sub Command Error"),
+            Error::CommandError => write!(f, "command: sub command error"),
+            Error::NotInitialized => write!(f, "command: not initialized"),
         }
     }
 }
@@ -20,13 +21,14 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 #[derive(Debug)]
-pub enum SubCommand<D>
+pub enum SubCommand<D, RW>
 where
     D: image_downloader::Downloader,
+    RW: setting::Reader + setting::Writer,
 {
     Exec(Exec),
     Init(Init),
-    Launch(Launch<D>),
+    Launch(Launch<D, RW>),
     List(List),
     Delete(Delete),
     File(FileSubCommand),
@@ -69,14 +71,16 @@ impl Init {
 }
 
 #[derive(Debug)]
-pub struct Launch<D>
+pub struct Launch<D, RW>
 where
     D: image_downloader::Downloader,
+    RW: setting::Reader + setting::Writer,
 {
     target_container: container::Container,
     rootfs_option: RootFSOption<D>,
     name: String,
     cmd: Cmd,
+    setting_handler: setting::SettingHandler<RW>,
 }
 
 #[derive(Debug)]
@@ -112,21 +116,26 @@ pub mod launch_error {
     impl std::error::Error for Error {}
 }
 
-impl<D> Launch<D>
+impl<D, RW> Launch<D, RW>
 where
     D: image_downloader::Downloader,
+    RW: setting::Reader + setting::Writer,
 {
     pub fn new(
         target_container: container::Container,
         rootfs_option: RootFSOption<D>,
         name: String,
         cmd: Cmd,
-    ) -> Result<Launch<D>, Box<dyn std::error::Error>> {
+        setting_reader_writer: RW,
+    ) -> Result<Launch<D, RW>, Box<dyn std::error::Error>> {
+        let setting_handler = setting::SettingHandler::new(setting_reader_writer);
+
         Ok(Launch {
             target_container: target_container,
             rootfs_option: rootfs_option,
             name: name,
             cmd: cmd,
+            setting_handler: setting_handler,
         })
     }
 
@@ -148,6 +157,14 @@ where
 
     pub fn cmd(&self) -> &Cmd {
         &self.cmd
+    }
+
+    pub fn setting_handler(&self) -> &setting::SettingHandler<RW> {
+        &self.setting_handler
+    }
+
+    pub fn setting_handler_mut(&mut self) -> &mut setting::SettingHandler<RW> {
+        &mut self.setting_handler
     }
 }
 

@@ -2,13 +2,16 @@ use crate::command::{
     self, Cmd, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption,
     SubCommand,
 };
-use crate::{container, image, image_downloader, image_downloader_lxd, user};
+use crate::{
+    container, image, image_downloader, image_downloader_lxd, setting, setting_yaml, user,
+};
 use clap::{Args, Parser, Subcommand};
-use regex::Regex;
 use std::path::PathBuf;
 
-pub fn parse<'a>(
-) -> Result<SubCommand<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
+pub fn parse() -> Result<
+    SubCommand<impl image_downloader::Downloader, impl setting::Reader + setting::Writer>,
+    Box<dyn std::error::Error>,
+> {
     let args: Cli = Cli::parse();
     match args.action {
         Action::Delete(delete) => Ok(SubCommand::Delete(initialize_delete(delete)?)),
@@ -24,12 +27,10 @@ pub fn parse<'a>(
 }
 
 fn initialize_delete(delete: DeleteArgs) -> Result<Delete, Box<dyn std::error::Error>> {
-    use command::delete_error::Error;
     Ok(Delete::new(delete.name))
 }
 
 fn initialize_exec(exec: ExecArgs) -> Result<Exec, Box<dyn std::error::Error>> {
-    use command::exec_error::Error;
     Ok(Exec::new(exec.name, exec.cmd))
 }
 
@@ -59,9 +60,10 @@ fn initialize_init() -> Result<Init, Box<dyn std::error::Error>> {
 
 fn initialize_launch(
     launch: LaunchArgs,
-) -> Result<Launch<impl image_downloader::Downloader>, Box<dyn std::error::Error>> {
-    use command::launch_error::Error;
-
+) -> Result<
+    Launch<impl image_downloader::Downloader, impl setting::Reader + setting::Writer>,
+    Box<dyn std::error::Error>,
+> {
     let rootfs = check_rootfs(
         launch.opt_rootfs.as_ref().map(|r| r.as_str()),
         launch.opt_rootfs_image.as_ref().map(|r| r.as_str()),
@@ -71,12 +73,18 @@ fn initialize_launch(
 
     let container = container::Container::new(&launch.container_id_or_name)?;
 
-    Ok(Launch::new(
+    let user = user::User::new()?;
+    let dcontainer_base = format!("{}/{}", user.containers(), launch.name);
+    let setting_file_path = PathBuf::from(format!("{}/setting.yaml", &dcontainer_base));
+    let setting_yaml_reader_writer = setting_yaml::YamlReaderWriter::new(&setting_file_path);
+
+    Launch::new(
         container,
         rootfs,
         String::from(launch.name),
         Cmd::new(Box::new(launch.cmd.into_iter())),
-    )?)
+        setting_yaml_reader_writer,
+    )
 }
 
 fn initialize_list() -> Result<List, Box<dyn std::error::Error>> {

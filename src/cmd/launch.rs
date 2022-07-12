@@ -1,18 +1,15 @@
 use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
-use crate::launch::Launch;
-use crate::user;
-use crate::utils;
-use std::ffi::{CString, OsStr};
+use crate::{setting, user, utils};
+use std::ffi::OsStr;
 use std::fs::File;
-use std::io::prelude::*;
 use std::path::Path;
 use std::{error, fmt, fs};
 
 use nix::mount::{mount, umount2, MntFlags, MsFlags};
 use nix::sched::{setns, CloneFlags};
 use nix::sys::wait::waitpid;
-use nix::unistd::{execv, fork, ForkResult};
+use nix::unistd::{fork, ForkResult};
 
 use std::os::unix::io::AsRawFd;
 
@@ -33,14 +30,16 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AlreadyExists => write!(f, "Debug Container Already Exists"),
-            Umount => write!(f, "umount error"),
-            NonValidUnicode => write!(f, "non valid unicode"),
-            InvalidRootFSPath => write!(f, "invalid rootfs path"),
-            NotImplemented => write!(f, "Not implemented"),
-            Fork => write!(f, "failed fork"),
-            Waitpid => write!(f, "failed waitpid"),
-            InputValue => write!(f, "Input value is illegal"),
+            Error::AlreadyExists => write!(f, "Debug Container Already Exists"),
+            Error::Umount => write!(f, "umount error"),
+            Error::NonValidUnicode => write!(f, "non valid unicode"),
+            Error::InvalidRootFSPath => write!(f, "invalid rootfs path"),
+            Error::NotImplemented => write!(f, "Not implemented"),
+            Error::Fork => write!(f, "failed fork"),
+            Error::Waitpid => write!(f, "failed waitpid"),
+            Error::InputValue => write!(f, "Input value is illegal"),
+            Error::UnmountFailed(e) => write!(f, "Unmount failed due to {}", e),
+            Error::MountFailed(e) => write!(f, "Mount failed due to {}", e),
         }
     }
 }
@@ -49,10 +48,7 @@ impl error::Error for Error {}
 
 pub struct LaunchStruct;
 
-impl<DO> Launch<DO> for LaunchStruct
-where
-    DO: Downloader,
-{
+impl LaunchStruct {
     /// rootfsの種類などが記載された設定ファイルsetting.yamlを~/.injesh/containers/に作成する
     /// /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
     /// デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
@@ -60,7 +56,10 @@ where
     /// forkする
     /// 取得したデバック対象コンテナプロセスIDをもとにsetnsをし、名前空間を同一にする
     /// 与えられた初期実行ファイルをexecする
-    fn launch(&self, launch: &mut command::Launch<DO>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn launch<DO: Downloader, RW: setting::Reader + setting::Writer>(
+        &self,
+        launch: &mut command::Launch<DO, RW>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // injeshコマンドが初期化されてるかどうかチェック
         utils::check_initialized()?;
 
@@ -112,13 +111,8 @@ where
 
         Ok(())
     }
-}
 
-impl LaunchStruct {
-    pub fn new<DO>() -> impl Launch<DO>
-    where
-        DO: Downloader,
-    {
+    pub fn new() -> LaunchStruct {
         LaunchStruct
     }
 }
@@ -132,8 +126,8 @@ impl LaunchStruct {
 /// - `~/.injesh/containers/<CONTAINER_NAME>/setting.yaml`
 ///
 ///     デバックコンテナの`rootfs`やデバックコンテナ作成後に実行するコマンドなどを保存する設定ファイル
-fn initialize_setting<DO: Downloader>(
-    launch: &command::Launch<DO>,
+fn initialize_setting<DO: Downloader, RW: setting::Reader + setting::Writer>(
+    launch: &mut command::Launch<DO, RW>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let user = user::User::new()?;
     let dcontainer_base = format!("{}/{}", user.containers(), launch.name());
@@ -144,9 +138,11 @@ fn initialize_setting<DO: Downloader>(
     }
 
     fs::create_dir_all(format!("{}/upper", &dcontainer_base))?;
-    let mut setting_file = fs::File::create(format!("{}/setting.yaml", &dcontainer_base))?;
-    // TODO: 設定ファイルの形式を決めてない
-    setting_file.write_all(b"content of setting.yaml")?;
+    let target_container_id = launch.target_container().container_id().to_string();
+    launch
+        .setting_handler_mut()
+        .init(&target_container_id, setting::Shell::Bash, &[]);
+    launch.setting_handler().write()?;
 
     // /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
     copy_dir_recursively(
@@ -189,7 +185,9 @@ where
 }
 
 /// `/var/lib/docker/overlay2/<HASH_ID>/upper`を`unmount`した後、任意の`rootfs`を挿入したものを`mount`する
-fn remount<DO: Downloader>(launch: &command::Launch<DO>) -> Result<(), Box<dyn std::error::Error>> {
+fn remount<DO: Downloader, RW: setting::Reader + setting::Writer>(
+    launch: &command::Launch<DO, RW>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let rootfs_path = match launch.rootfs_option() {
         RootFSOption::RootfsImage(image) => {
             match image.check_rootfs_newest() {

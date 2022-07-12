@@ -1,11 +1,14 @@
 use crate::command::{self, list_error::Error};
-use crate::list::List;
 use std::fs;
 
 pub struct ListStruct;
 
-impl List for ListStruct {
-    fn list(&self, list: &command::List) -> Result<(), Box<dyn std::error::Error>> {
+impl ListStruct {
+    pub fn new() -> Self {
+        ListStruct
+    }
+
+    pub fn list(&self, list: &command::List) -> Result<(), Box<dyn std::error::Error>> {
         crate::utils::check_initialized()?;
 
         let user_info = list.user();
@@ -42,12 +45,6 @@ fn extract_container_names(
     }
 
     Ok(container_names)
-}
-
-impl ListStruct {
-    pub fn new() -> Self {
-        ListStruct
-    }
 }
 
 impl Default for ListStruct {
