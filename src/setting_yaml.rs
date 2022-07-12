@@ -29,7 +29,7 @@ impl fmt::Display for Error {
 
 impl error::Error for Error {}
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct YamlSetting {
     docker_container_id: String,
     shell: String,
@@ -92,19 +92,6 @@ impl Writer for YamlReaderWriter {
         setting_file.write_all(yaml_string.as_bytes())?;
 
         Ok(())
-    }
-}
-
-impl Serialize for YamlSetting {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut s = serializer.serialize_struct("Setting", 3)?;
-        s.serialize_field("docker_container_id", &self.docker_container_id)?;
-        s.serialize_field("shell", &self.shell)?;
-        s.serialize_field("commands", &self.commands)?;
-        s.end()
     }
 }
 
