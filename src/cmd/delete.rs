@@ -37,9 +37,7 @@ impl DeleteStruct {
         mount_merged_directory(&overlayfs_dirs)?;
 
         // restart container
-        let docker_container_id =
-            container::Container::convert_injesh_name_to_docker_id(injesh_container_name)?;
-        container::Container::new(&docker_container_id)?.restart()?;
+        container::Container::restart_from_name(injesh_container_name)?;
 
         // delete own containers directory
         fs::remove_dir_all(container_dir_path).map_err(|why| Error::RemoveFailed(why))?;
@@ -67,10 +65,9 @@ fn overwrite_target_upperdir_by_own_upperdir(
     overlayfs_dirs: &container::Container,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let target_upperdir = overlayfs_dirs.upperdir();
-    let own_upperdir = container_dir_path.join("upper");
+    let own_upperdir = container_dir_path.join("upperdir");
 
-    // copy_dir_recursively(&own_upperdir, target_upperdir).map_err(|why| Error::CopyFailed(why))?;
-    copy_dir_recursively(&own_upperdir, target_upperdir)?;
+    fs::copy(own_upperdir, target_upperdir).map_err(|why| Error::CopyFailed(why))?;
 
     Ok(())
 }
@@ -111,40 +108,5 @@ fn mount_merged_directory(
     )
     .map_err(|why| Error::MountFailed(why))?;
 
-    Ok(())
-}
-
-fn copy_dir_recursively(
-    src: &std::path::PathBuf,
-    dest: &std::path::PathBuf,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let src_pathbuf = src.clone();
-    let dest_pathbuf = dest.clone();
-    let src_path = src.as_path();
-    let dest_path = dest.as_path();
-
-    if !src_path.is_dir() {
-        Err(Error::InvalidPath(src_pathbuf))?
-    }
-    if !dest_path.is_dir() {
-        Err(Error::InvalidPath(dest_pathbuf))?
-    }
-
-    for entry_result in fs::read_dir(src)? {
-        let entry = entry_result?;
-        let entry_path = entry.path();
-        let dest_entry_path = dest_path.join(
-            &entry_path
-                .file_name()
-                .ok_or(Error::InvalidPath(entry_path.clone()))?,
-        );
-
-        if entry.file_type()?.is_dir() {
-            fs::create_dir(&dest_path)?;
-            copy_dir_recursively(&entry_path, &dest_entry_path)?;
-        } else {
-            fs::copy(entry_path, &dest_path)?;
-        }
-    }
     Ok(())
 }

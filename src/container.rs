@@ -1,7 +1,6 @@
 use form_urlencoded;
 use httparse::{Response, EMPTY_HEADER};
 use serde::Deserialize;
-use serde_yaml;
 use std::io::prelude::*;
 use std::os::unix::net::UnixStream;
 use std::{error, fmt, path};
@@ -179,29 +178,6 @@ impl Container {
 
         Ok(())
     }
-
-    pub fn convert_injesh_name_to_docker_id(
-        injesh_container_name: &str,
-    ) -> Result<String, Box<dyn std::error::Error>> {
-        // read `settings.yaml`
-        let settings_file_path = std::path::Path::new(crate::user::User::new()?.containers())
-            .join(injesh_container_name)
-            .join("settings.yaml");
-
-        // extract `docker_container_id` from yaml
-        let settings_yaml_str = std::fs::read_to_string(settings_file_path)?;
-        let settings_yaml: SettingsYaml = serde_yaml::from_str(&settings_yaml_str)?;
-        let docker_container_id = settings_yaml.docker_container_id;
-
-        Ok(docker_container_id)
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SettingsYaml {
-    pub docker_container_id: String,
-    pub shell: String,
-    pub commands: Vec<String>,
 }
 
 fn get_pid_from_container_id(target_container_id: &str) -> Result<u32, Box<dyn std::error::Error>> {
@@ -468,18 +444,5 @@ impl DockerdResponse {
             500 => DockerdResponse::ServerError,
             _ => DockerdResponse::NotFound,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[ignore]
-    fn test_convert_injesh_name_to_docker_id() {
-        let name = "tes";
-        let id = Container::convert_injesh_name_to_docker_id(name).unwrap();
-        println!("id: {}", id);
     }
 }
