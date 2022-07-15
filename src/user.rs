@@ -1,6 +1,6 @@
 mod linux;
-mod windows;
 mod macos;
+mod windows;
 
 use std::{env, error, fmt};
 
@@ -16,7 +16,9 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::WindowsHomePathUnimplemented => write!(f, "user: windows home path unimplemented"),
+            Error::WindowsHomePathUnimplemented => {
+                write!(f, "user: windows home path unimplemented")
+            }
             Error::MacOSHomePathUnimplemented => write!(f, "user: macos home path unimplemented"),
             Error::SudoUserNotFound => write!(f, "user: sudo user not found"),
             Error::HomeNotFound => write!(f, "user: Home not found"),

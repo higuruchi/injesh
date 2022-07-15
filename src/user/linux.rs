@@ -1,8 +1,8 @@
 use crate::setting::Shell;
 
-use std::{env, error, fmt};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::{env, error, fmt};
 
 #[derive(Debug)]
 pub enum Error {
@@ -33,22 +33,23 @@ struct Passwd {
     group_id: u64,
     comment: String,
     home_dir: String,
-    login_shell: Option<Shell>
+    login_shell: Option<Shell>,
 }
 
 impl Passwd {
     /// `/etc/passwd`の1行をパースする
     fn parse_passwd_line(line: &str) -> Result<Passwd, Box<dyn std::error::Error>> {
         let passwd_content: Vec<&str> = line.split(':').collect();
-        let login_shell = if passwd_content[6] == "/usr/sbin/nologin" || passwd_content[6] == "/usr/bin/false" {
-            None
-        } else {
-            match passwd_content[6] {
-                "/bin/bash" => Some(Shell::Bash),
-                "/bin/sh" => Some(Shell::Sh),
-                _ => None
-            }
-        };
+        let login_shell =
+            if passwd_content[6] == "/usr/sbin/nologin" || passwd_content[6] == "/usr/bin/false" {
+                None
+            } else {
+                match passwd_content[6] {
+                    "/bin/bash" => Some(Shell::Bash),
+                    "/bin/sh" => Some(Shell::Sh),
+                    _ => None,
+                }
+            };
 
         let passwd = Passwd {
             user_name: passwd_content[0].to_string(),
