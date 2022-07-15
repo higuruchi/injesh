@@ -126,7 +126,7 @@ impl image_downloader::Downloader for Downloader {
     fn download_rootfs_hash(&self, destination: &Path) -> Result<(), Box<dyn std::error::Error>> {
         let newest_path = self.newest_url().ok_or(Error::ImageMetaNotFound)?;
 
-        // rootfsのhashフィあるをダウンロード
+        // rootfsのhashファイルダウンロード
         let hash_resp = reqwest::blocking::get(format!(
             "{}/{}/{}",
             ROOTFS_SERVER_DOMAIN, newest_path, ROOTFS_HASH_FILE
