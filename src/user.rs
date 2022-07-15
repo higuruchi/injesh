@@ -1,4 +1,31 @@
+mod linux;
+mod windows;
+mod macos;
+
 use std::{env, error, fmt};
+
+#[derive(Debug)]
+pub enum Error {
+    WindowsHomePathUnimplemented,
+    MacOSHomePathUnimplemented,
+    SudoUserNotFound,
+    HomeNotFound,
+    UnsupportedArchitecture,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::WindowsHomePathUnimplemented => write!(f, "user: windows home path unimplemented"),
+            Error::MacOSHomePathUnimplemented => write!(f, "user: macos home path unimplemented"),
+            Error::SudoUserNotFound => write!(f, "user: sudo user not found"),
+            Error::HomeNotFound => write!(f, "user: Home not found"),
+            Error::UnsupportedArchitecture => write!(f, "user: unsupported architecture"),
+        }
+    }
+}
+
+impl error::Error for Error {}
 
 #[derive(Debug)]
 pub struct User {
@@ -10,10 +37,15 @@ pub struct User {
 
 impl User {
     pub fn new() -> Result<User, Box<dyn std::error::Error>> {
-        let injesh_homedir = match env::var("HOME") {
-            Ok(home) => home + "/.injesh",
-            Err(_) => return Err(Error::HomeNotFound)?,
-        };
+        #[cfg(target_os = "linux")]
+        let injesh_homedir = linux::injesh_home_dir()?;
+
+        #[cfg(target_os = "windows")]
+        let injesh_homedir = windows::home_dir()?;
+
+        #[cfg(target_os = "macos")]
+        let injesh_homedir = macos::home_dir()?;
+
         let architecture = CpuArchitecture::new()?;
 
         Ok(User {
@@ -55,15 +87,6 @@ impl fmt::Display for CpuArchitecture {
     }
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::HomeNotFound => write!(f, "Home not found!"),
-            Error::UnsupportedArchitecture => write!(f, "cpu architecture unsupported"),
-        }
-    }
-}
-
 impl CpuArchitecture {
     fn new() -> Result<CpuArchitecture, Box<dyn std::error::Error>> {
         let uname = nix::sys::utsname::uname();
@@ -78,14 +101,6 @@ impl CpuArchitecture {
         Ok(architecture)
     }
 }
-
-#[derive(Debug)]
-pub enum Error {
-    HomeNotFound,
-    UnsupportedArchitecture,
-}
-
-impl error::Error for Error {}
 
 mod tests {
     use super::*;
