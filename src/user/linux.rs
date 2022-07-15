@@ -6,7 +6,7 @@ use std::{env, error, fmt};
 
 #[derive(Debug)]
 pub enum Error {
-    SudoUserNotFound,
+    HomeNotFound,
     InvalidPasswd,
     InvalidUserId,
     InvalidGroupId,
@@ -15,7 +15,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::SudoUserNotFound => write!(f, "user: sudo user not found"),
+            Error::HomeNotFound => write!(f, "user: home directory not found"),
             Error::InvalidPasswd => write!(f, "user: invalid passwd"),
             Error::InvalidUserId => write!(f, "user: invalid userid"),
             Error::InvalidGroupId => write!(f, "user: invalid groupid"),
@@ -40,16 +40,11 @@ impl Passwd {
     /// `/etc/passwd`の1行をパースする
     fn parse_passwd_line(line: &str) -> Result<Passwd, Box<dyn std::error::Error>> {
         let passwd_content: Vec<&str> = line.split(':').collect();
-        let login_shell =
-            if passwd_content[6] == "/usr/sbin/nologin" || passwd_content[6] == "/usr/bin/false" {
-                None
-            } else {
-                match passwd_content[6] {
-                    "/bin/bash" => Some(Shell::Bash),
-                    "/bin/sh" => Some(Shell::Sh),
-                    _ => None,
-                }
-            };
+        let login_shell = match passwd_content[6] {
+            "/bin/bash" => Some(Shell::Bash),
+            "/bin/sh" => Some(Shell::Sh),
+            _ => None,
+        };
 
         let passwd = Passwd {
             user_name: passwd_content[0].to_string(),
@@ -87,7 +82,7 @@ pub fn injesh_home_dir() -> Result<String, Box<dyn std::error::Error>> {
         Ok(sudo_user) => sudo_user,
         Err(_) => match env::var("USER") {
             Ok(user) => user,
-            Err(_) => Err(Error::SudoUserNotFound)?,
+            Err(_) => Err(Error::HomeNotFound)?,
         },
     };
 
@@ -98,5 +93,5 @@ pub fn injesh_home_dir() -> Result<String, Box<dyn std::error::Error>> {
         }
     }
 
-    Err(Error::SudoUserNotFound)?
+    Err(Error::HomeNotFound)?
 }
