@@ -72,11 +72,7 @@ where
     DO: Downloader,
     RW: setting::Reader + setting::Writer,
 {
-    pub fn new(
-        command: SubCommand<DO, RW>,
-    ) -> impl Handler {
-        HandlerStruct {
-            command: command,
-        }
+    pub fn new(command: SubCommand<DO, RW>) -> impl Handler {
+        HandlerStruct { command: command }
     }
 }
