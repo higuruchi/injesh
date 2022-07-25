@@ -1,6 +1,5 @@
 use crate::setting::{Reader, Setting, Shell, Writer};
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::str;
 
 use std::fs::{File, OpenOptions};

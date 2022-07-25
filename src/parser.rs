@@ -1,40 +1,34 @@
-use crate::command::{
-    self, Cmd, Delete, Error, Exec, File, FileSubCommand, Init, Launch, List, RootFSOption,
-    SubCommand,
-};
+use crate::command::{self, Cmd, Delete, Error, Exec, File, Init, Launch, List, RootFSOption};
 use crate::{
     container, image, image_downloader, image_downloader_lxd, setting, setting_yaml, user,
 };
+
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
-pub fn parse() -> Result<
-    SubCommand<impl image_downloader::Downloader, impl setting::Reader + setting::Writer>,
-    Box<dyn std::error::Error>,
-> {
-    let args: Cli = Cli::parse();
-    match args.action {
-        Action::Delete(delete) => Ok(SubCommand::Delete(initialize_delete(delete)?)),
-        Action::Exec(exec) => Ok(SubCommand::Exec(initialize_exec(exec)?)),
-        Action::File(file) => Ok(SubCommand::File(match file.action {
-            FileAction::Pull(pull) => FileSubCommand::Pull(initialize_file_pull(pull)?),
-            FileAction::Push(push) => FileSubCommand::Push(initialize_file_push(push)?),
-        })),
-        Action::Init => Ok(SubCommand::Init(initialize_init()?)),
-        Action::Launch(launch) => Ok(SubCommand::Launch(initialize_launch(launch)?)),
-        Action::List => Ok(SubCommand::List(initialize_list()?)),
-    }
-}
-
-fn initialize_delete(delete: DeleteArgs) -> Result<Delete, Box<dyn std::error::Error>> {
+pub fn initialize_delete(delete: DeleteArgs) -> Result<Delete, Box<dyn std::error::Error>> {
     Ok(Delete::new(delete.name))
 }
 
-fn initialize_exec(exec: ExecArgs) -> Result<Exec, Box<dyn std::error::Error>> {
-    Ok(Exec::new(exec.name, exec.cmd))
+pub fn initialize_exec(
+    exec: ExecArgs,
+) -> Result<
+    Exec<image_downloader_lxd::Downloader, setting_yaml::YamlReaderWriter>,
+    Box<dyn std::error::Error>,
+> {
+    let user = user::User::new()?;
+    let dcontainer_base = format!("{}/{}", user.containers(), exec.name);
+    let setting_file_path = PathBuf::from(format!("{}/setting.yaml", &dcontainer_base));
+    let setting_yaml_reader_writer = setting_yaml::YamlReaderWriter::new(&setting_file_path);
+
+    Ok(Exec::new(
+        exec.name,
+        Cmd::new(Box::new(exec.cmd.into_iter())),
+        setting_yaml_reader_writer,
+    ))
 }
 
-fn initialize_file_pull(pull: PullArgs) -> Result<File, Box<dyn std::error::Error>> {
+pub fn initialize_file_pull(pull: PullArgs) -> Result<File, Box<dyn std::error::Error>> {
     use command::file_error::Error;
     let name_and_path = parse_container_path(&pull.src).map_err(|_| Error::FromParseError)?;
     Ok(File::new(
@@ -44,7 +38,7 @@ fn initialize_file_pull(pull: PullArgs) -> Result<File, Box<dyn std::error::Erro
     ))
 }
 
-fn initialize_file_push(push: PushArgs) -> Result<File, Box<dyn std::error::Error>> {
+pub fn initialize_file_push(push: PushArgs) -> Result<File, Box<dyn std::error::Error>> {
     use command::file_error::Error;
     let name_and_path = parse_container_path(&push.src).map_err(|_| Error::FromParseError)?;
     Ok(File::new(
@@ -54,11 +48,15 @@ fn initialize_file_push(push: PushArgs) -> Result<File, Box<dyn std::error::Erro
     ))
 }
 
-fn initialize_init() -> Result<Init, Box<dyn std::error::Error>> {
+pub fn initialize_init<D, RW>() -> Result<Init<D, RW>, Box<dyn std::error::Error>>
+where
+    D: image_downloader::Downloader,
+    RW: setting::Reader + setting::Writer,
+{
     Ok(Init::new()?)
 }
 
-fn initialize_launch(
+pub fn initialize_launch(
     launch: LaunchArgs,
 ) -> Result<
     Launch<impl image_downloader::Downloader, impl setting::Reader + setting::Writer>,
@@ -87,11 +85,11 @@ fn initialize_launch(
     )
 }
 
-fn initialize_list() -> Result<List, Box<dyn std::error::Error>> {
+pub fn initialize_list() -> Result<List, Box<dyn std::error::Error>> {
     Ok(List::new()?)
 }
 
-fn check_rootfs(
+pub fn check_rootfs(
     opt_rootfs: Option<&str>,
     opt_rootfs_image: Option<&str>,
     opt_rootfs_docker: Option<&str>,

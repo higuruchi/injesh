@@ -1,5 +1,6 @@
 use crate::{container, image, image_downloader, setting, user};
 use std::fmt;
+use std::marker::PhantomData;
 use std::path::PathBuf;
 
 // TODO::それぞれの方に応じたエラーを定義する
@@ -26,17 +27,23 @@ where
     D: image_downloader::Downloader,
     RW: setting::Reader + setting::Writer,
 {
-    Exec(Exec),
-    Init(Init),
+    Init(Init<D, RW>),
     Launch(Launch<D, RW>),
+    Exec(Exec<D, RW>),
     List(List),
     Delete(Delete),
     File(FileSubCommand),
 }
 
 #[derive(Debug)]
-pub struct Init {
+pub struct Init<D, RW>
+where
+    D: image_downloader::Downloader,
+    RW: setting::Reader + setting::Writer,
+{
     user: user::User,
+    p1: PhantomData<D>,
+    p2: PhantomData<RW>,
 }
 
 pub mod init_error {
@@ -58,11 +65,19 @@ pub mod init_error {
     impl std::error::Error for Error {}
 }
 
-impl Init {
-    pub fn new() -> Result<Init, Box<dyn std::error::Error>> {
+impl<D, RW> Init<D, RW>
+where
+    D: image_downloader::Downloader,
+    RW: setting::Reader + setting::Writer,
+{
+    pub fn new() -> Result<Init<D, RW>, Box<dyn std::error::Error>> {
         let user = user::User::new()?;
 
-        Ok(Init { user: user })
+        Ok(Init {
+            user: user,
+            p1: PhantomData,
+            p2: PhantomData,
+        })
     }
 
     pub fn user(&self) -> &user::User {
@@ -216,9 +231,15 @@ impl List {
 }
 
 #[derive(Debug)]
-pub struct Exec {
+pub struct Exec<D, RW>
+where
+    D: image_downloader::Downloader,
+    RW: setting::Reader + setting::Writer,
+{
     name: String,
-    cmd: Option<String>,
+    cmd: Cmd,
+    setting_handler: setting::SettingHandler<RW>,
+    phantom_downloader: PhantomData<D>,
 }
 
 pub mod exec_error {
@@ -240,12 +261,36 @@ pub mod exec_error {
     impl std::error::Error for Error {}
 }
 
-impl Exec {
-    pub fn new(name: String, cmd: Option<String>) -> Exec {
+impl<D, RW> Exec<D, RW>
+where
+    D: image_downloader::Downloader,
+    RW: setting::Reader + setting::Writer,
+{
+    pub fn new(name: String, cmd: Cmd, setting_reader_writer: RW) -> Exec<D, RW> {
+        let setting_handler = setting::SettingHandler::new(setting_reader_writer);
+
         Exec {
             name: name,
             cmd: cmd,
+            setting_handler: setting_handler,
+            phantom_downloader: PhantomData,
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn cmd(&self) -> &Cmd {
+        &self.cmd
+    }
+
+    pub fn setting(&self) -> &setting::SettingHandler<RW> {
+        &self.setting_handler
+    }
+
+    pub fn setting_mut(&mut self) -> &mut setting::SettingHandler<RW> {
+        &mut self.setting_handler
     }
 }
 

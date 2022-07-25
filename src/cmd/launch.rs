@@ -1,17 +1,13 @@
 use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
-use crate::{setting, user, utils};
+use crate::{namespace, setting, user, utils};
 use std::ffi::OsStr;
-use std::fs::File;
 use std::path::Path;
 use std::{error, fmt, fs};
 
 use nix::mount::{mount, umount2, MntFlags, MsFlags};
-use nix::sched::{setns, CloneFlags};
 use nix::sys::wait::waitpid;
 use nix::unistd::{fork, ForkResult};
-
-use std::os::unix::io::AsRawFd;
 
 #[derive(Debug)]
 pub enum Error {
@@ -75,7 +71,7 @@ impl LaunchStruct {
 
         // デバック対象コンテナのプロセスIDとネームスペースのファイルディスクリプタを取得
         let container_pid = launch.target_container().pid();
-        let ns = Ns::new(container_pid)?;
+        let ns = namespace::Ns::new(container_pid)?;
 
         unsafe {
             match fork() {
@@ -244,68 +240,6 @@ fn remount<DO: Downloader, RW: setting::Reader + setting::Writer>(
     .map_err(|why| Error::MountFailed(why))?;
 
     Ok(())
-}
-
-/// プロセスのnamespaceファイルディスクリプタを管理する構造体
-struct Ns {
-    net: File,
-    cgroup: File,
-    ipc: File,
-    pid: File,
-    user: File,
-    mnt: File,
-    uts: File,
-}
-
-impl Ns {
-    fn new(container_pid: u32) -> Result<Ns, Box<dyn std::error::Error>> {
-        let ns_base_path = format!("/proc/{}/ns", container_pid);
-
-        Ok(Ns {
-            net: File::open(format!("{}/net", &ns_base_path))?,
-            cgroup: File::open(format!("{}/cgroup", &ns_base_path))?,
-            ipc: File::open(format!("{}/ipc", &ns_base_path))?,
-            pid: File::open(format!("{}/pid", &ns_base_path))?,
-            user: File::open(format!("{}/user", &ns_base_path))?,
-            mnt: File::open(format!("{}/mnt", &ns_base_path))?,
-            uts: File::open(format!("{}/uts", &ns_base_path))?,
-        })
-    }
-
-    fn setns_net(&self) -> Result<(), Box<dyn std::error::Error>> {
-        setns(self.net.as_raw_fd(), CloneFlags::empty())?;
-        Ok(())
-    }
-
-    fn setns_cgroup(&self) -> Result<(), Box<dyn std::error::Error>> {
-        setns(self.cgroup.as_raw_fd(), CloneFlags::empty())?;
-        Ok(())
-    }
-
-    fn setns_ipc(&self) -> Result<(), Box<dyn std::error::Error>> {
-        setns(self.ipc.as_raw_fd(), CloneFlags::empty())?;
-        Ok(())
-    }
-
-    fn setns_pid(&self) -> Result<(), Box<dyn std::error::Error>> {
-        setns(self.pid.as_raw_fd(), CloneFlags::empty())?;
-        Ok(())
-    }
-
-    fn setns_user(&self) -> Result<(), Box<dyn std::error::Error>> {
-        setns(self.user.as_raw_fd(), CloneFlags::empty())?;
-        Ok(())
-    }
-
-    fn setns_mnt(&self) -> Result<(), Box<dyn std::error::Error>> {
-        setns(self.mnt.as_raw_fd(), CloneFlags::empty())?;
-        Ok(())
-    }
-
-    fn setns_uts(&self) -> Result<(), Box<dyn std::error::Error>> {
-        setns(self.uts.as_raw_fd(), CloneFlags::empty())?;
-        Ok(())
-    }
 }
 
 mod tests {
