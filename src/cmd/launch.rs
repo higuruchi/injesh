@@ -1,6 +1,6 @@
 use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
-use crate::{cmd::common, namespace, setting, user, utils};
+use crate::{namespace, setting, user, utils};
 use std::path::{Path, PathBuf};
 use std::{error, fmt, fs::create_dir_all};
 
@@ -67,6 +67,20 @@ impl LaunchStruct {
         // デバック対象コンテナのプロセスIDとネームスペースのファイルディスクリプタを取得
         let container_pid = launch.target_container().pid();
         let ns = namespace::Ns::new(container_pid)?;
+        // let gid = Gid::current();
+        // let uid = Uid::current();
+
+        // setnsで名前空間を変更
+        ns.setns_net()?;
+        ns.setns_cgroup()?;
+        ns.setns_ipc()?;
+        ns.setns_pid()?;
+        ns.setns_uts()?;
+        unshare(CloneFlags::CLONE_NEWNS)?;
+        // unshare(CloneFlags::CLONE_NEWUSER)?;
+        // common::new_uidmap(&uid)?;
+        // common::new_gidmap(&gid)?;
+
 
         unsafe {
             match fork() {
@@ -77,25 +91,14 @@ impl LaunchStruct {
                 },
                 // 子プロセス
                 Ok(ForkResult::Child) => {
-                    let gid = Gid::current();
-                    let uid = Uid::current();
-
-                    // setnsで名前空間を変更
-                    ns.setns_net()?;
-                    ns.setns_cgroup()?;
-                    ns.setns_ipc()?;
-                    ns.setns_pid()?;
-                    ns.setns_uts()?;
-                    unshare(CloneFlags::CLONE_NEWUSER)?;
-
-                    common::new_uidmap(&uid)?;
-                    common::new_gidmap(&gid)?;
 
                     let user = user::User::new()?;
                     let dcontainer_base = format!("{}/{}", user.containers(), launch.name());
                     let dcontainer_base_merged = format!("{}/merged", &dcontainer_base);
+
                     chroot(&PathBuf::from(&dcontainer_base_merged))?;
                     chdir("/")?;
+                    mount(Some("proc"), "/proc", Some("proc"), MsFlags::empty(), None::<&Path>).map_err(|why| Error::MountFailed(why))?;
 
                     // execでプログラムを実行
                     use std::os::unix::process::CommandExt;
@@ -135,7 +138,7 @@ fn initialize_setting<DO: Downloader, RW: setting::Reader + setting::Writer>(
         Err(Error::AlreadyExists)?
     }
 
-    create_dir_all(format!("{}/upper", &dcontainer_base))?;
+    create_dir_all(format!("{}/upper/proc", &dcontainer_base))?;
     create_dir_all(format!("{}/merged", &dcontainer_base))?;
     create_dir_all(format!("{}/worker", &dcontainer_base))?;
 
