@@ -81,7 +81,6 @@ impl LaunchStruct {
         // common::new_uidmap(&uid)?;
         // common::new_gidmap(&gid)?;
 
-
         unsafe {
             match fork() {
                 // 親プロセスの場合
@@ -91,14 +90,20 @@ impl LaunchStruct {
                 },
                 // 子プロセス
                 Ok(ForkResult::Child) => {
-
                     let user = user::User::new()?;
                     let dcontainer_base = format!("{}/{}", user.containers(), launch.name());
                     let dcontainer_base_merged = format!("{}/merged", &dcontainer_base);
 
                     chroot(&PathBuf::from(&dcontainer_base_merged))?;
                     chdir("/")?;
-                    mount(Some("proc"), "/proc", Some("proc"), MsFlags::empty(), None::<&Path>).map_err(|why| Error::MountFailed(why))?;
+                    mount(
+                        Some("proc"),
+                        "/proc",
+                        Some("proc"),
+                        MsFlags::empty(),
+                        None::<&Path>,
+                    )
+                    .map_err(|why| Error::MountFailed(why))?;
 
                     // execでプログラムを実行
                     use std::os::unix::process::CommandExt;
