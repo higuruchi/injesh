@@ -1,13 +1,13 @@
 use crate::command::{self, RootFSOption};
 use crate::image_downloader::Downloader;
-use crate::{namespace, setting, user, utils};
-use std::ffi::OsStr;
-use std::path::Path;
-use std::{error, fmt, fs};
+use crate::{cmd::common, namespace, setting, user, utils};
+use std::path::{Path, PathBuf};
+use std::{error, fmt, fs::create_dir_all};
 
-use nix::mount::{mount, umount2, MntFlags, MsFlags};
+use nix::mount::{mount, MsFlags};
+use nix::sched::{unshare, CloneFlags};
 use nix::sys::wait::waitpid;
-use nix::unistd::{fork, ForkResult};
+use nix::unistd::{chdir, chroot, fork, ForkResult, Gid, Uid};
 
 #[derive(Debug)]
 pub enum Error {
@@ -62,12 +62,7 @@ impl LaunchStruct {
         // デバックコンテナの設定ファイル、ディレクトリ周りの初期化
         initialize_setting(launch)?;
 
-        // overlyafsのマウントし直し
-        remount(launch)?;
-
-        // デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
-        launch.target_container().restart()?;
-        launch.target_container_mut().update_pid()?;
+        rootfs_injected_overlayfs_mount(launch)?;
 
         // デバック対象コンテナのプロセスIDとネームスペースのファイルディスクリプタを取得
         let container_pid = launch.target_container().pid();
@@ -82,20 +77,27 @@ impl LaunchStruct {
                 },
                 // 子プロセス
                 Ok(ForkResult::Child) => {
+                    let gid = Gid::current();
+                    let uid = Uid::current();
+
                     // setnsで名前空間を変更
                     ns.setns_net()?;
                     ns.setns_cgroup()?;
                     ns.setns_ipc()?;
                     ns.setns_pid()?;
-
-                    // これがあるとなぜか失敗する
-                    // setns(user_fd.as_raw_fd(), CloneFlags::empty())?;
-
-                    ns.setns_mnt()?;
                     ns.setns_uts()?;
+                    unshare(CloneFlags::CLONE_NEWUSER)?;
+
+                    common::new_uidmap(&uid)?;
+                    common::new_gidmap(&gid)?;
+
+                    let user = user::User::new()?;
+                    let dcontainer_base = format!("{}/{}", user.containers(), launch.name());
+                    let dcontainer_base_merged = format!("{}/merged", &dcontainer_base);
+                    chroot(&PathBuf::from(&dcontainer_base_merged))?;
+                    chdir("/")?;
 
                     // execでプログラムを実行
-
                     use std::os::unix::process::CommandExt;
                     std::process::Command::new(launch.cmd().main())
                         .args(launch.cmd().detail())
@@ -133,57 +135,27 @@ fn initialize_setting<DO: Downloader, RW: setting::Reader + setting::Writer>(
         Err(Error::AlreadyExists)?
     }
 
-    fs::create_dir_all(format!("{}/upper", &dcontainer_base))?;
+    create_dir_all(format!("{}/upper", &dcontainer_base))?;
+    create_dir_all(format!("{}/merged", &dcontainer_base))?;
+    create_dir_all(format!("{}/worker", &dcontainer_base))?;
+
     let target_container_id = launch.target_container().container_id().to_string();
     launch
         .setting_handler_mut()
         .init(&target_container_id, setting::Shell::Bash, &[]);
     launch.setting_handler().write()?;
 
-    // /var/lib/docker/overlay2/<HASH_ID>/upperを~/.injesh/containers/<hoge>/upperに対してコピーする
-    copy_dir_recursively(
-        launch.target_container().upperdir(),
-        format!("{}/upper", &dcontainer_base),
-    )?;
-
     Ok(())
 }
 
-/// ディレクトリを再起的にコピーする関数
-/// ```ignore
-/// copy_dir_recursively("/path/to/from", "/path/to/to")
-/// ```
-fn copy_dir_recursively<P, Q>(from: P, to: Q) -> Result<(), Box<dyn std::error::Error>>
-where
-    P: AsRef<OsStr> + AsRef<Path>,
-    Q: AsRef<OsStr> + AsRef<Path>,
-{
-    if !Path::new(&from).is_dir() {
-        Err(Error::InputValue)?
-    }
-    if !Path::new(&to).is_dir() {
-        Err(Error::InputValue)?
-    }
-
-    let to_name = Path::new(&to).to_str().ok_or(Error::InputValue)?;
-    for entry_result in fs::read_dir(from)? {
-        let entry = entry_result?;
-        let to_path = Path::new(to_name).join(entry.path().file_name().ok_or(Error::InputValue)?);
-
-        if entry.file_type()?.is_dir() {
-            fs::create_dir(&to_path)?;
-            copy_dir_recursively(entry.path(), &to_path)?;
-        } else {
-            fs::copy(entry.path(), &to_path)?;
-        }
-    }
-    Ok(())
-}
-
-/// `/var/lib/docker/overlay2/<HASH_ID>/upper`を`unmount`した後、任意の`rootfs`を挿入したものを`mount`する
-fn remount<DO: Downloader, RW: setting::Reader + setting::Writer>(
+/// rootfsを挿入したoverlayfsをマウントする
+/// mountpoint: `~/.injesh/containers/<CONTAINER_NAME>/merged`
+fn rootfs_injected_overlayfs_mount<DO: Downloader, RW: setting::Reader + setting::Writer>(
     launch: &command::Launch<DO, RW>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let user = user::User::new()?;
+    let dcontainer_base = format!("{}/{}", user.containers(), launch.name());
+
     let rootfs_path = match launch.rootfs_option() {
         RootFSOption::RootfsImage(image) => {
             match image.check_rootfs_newest() {
@@ -200,71 +172,32 @@ fn remount<DO: Downloader, RW: setting::Reader + setting::Writer>(
         }
         _ => Err(Error::NotImplemented)?,
     };
-    let lower_dir = launch
+
+    let dcontainer_merged = PathBuf::from(format!("{}/merged", &dcontainer_base));
+    let dcontainer_worker = format!("{}/worker", &dcontainer_base);
+    let dcontainer_upper = format!("{}/upper", &dcontainer_base);
+
+    let target_container_merged = launch
         .target_container()
-        .lowerdir()
-        .to_str()
-        .ok_or(Error::NonValidUnicode)?;
-    let upper_dir = launch
-        .target_container()
-        .upperdir()
-        .to_str()
-        .ok_or(Error::NonValidUnicode)?;
-    let work_dir = launch
-        .target_container()
-        .workdir()
+        .mergeddir()
         .to_str()
         .ok_or(Error::NonValidUnicode)?;
 
-    // デバック対象コンテナのlowerdirに対してrootfsを追加した後reloadする
-    umount2(launch.target_container().mergeddir(), MntFlags::empty())
-        .map_err(|why| Error::UnmountFailed(why))?;
-
+    let mount_data = format!(
+        "lowerdir={}:{},upperdir={},workdir={}",
+        rootfs_path.to_str().ok_or(Error::InvalidRootFSPath)?,
+        target_container_merged,
+        dcontainer_upper,
+        dcontainer_worker
+    );
     mount(
         Some("overlay"),
-        // launch.target_container().mergeddir(),
-        launch.target_container().mergeddir(),
+        &dcontainer_merged,
         Some("overlay"),
         MsFlags::empty(),
-        Some(
-            format!(
-                "lowerdir={}:{},upperdir={},workdir={}",
-                rootfs_path.to_str().ok_or(Error::InvalidRootFSPath)?,
-                lower_dir,
-                upper_dir,
-                work_dir,
-            )
-            .as_str(),
-        ),
+        Some(mount_data.as_str()),
     )
     .map_err(|why| Error::MountFailed(why))?;
 
     Ok(())
-}
-
-mod tests {
-    use super::*;
-    use std::fs::{self, File};
-
-    #[test]
-    #[ignore]
-    fn test_copy_dir_recursively() {
-        fs::create_dir_all("./upper/dir1/dir2").unwrap();
-        File::create("./upper/file1").unwrap();
-        File::create("./upper/file2").unwrap();
-        File::create("./upper/dir1/file3").unwrap();
-        File::create("./upper/dir1/dir2/file3").unwrap();
-        fs::create_dir("./upper_copy").unwrap();
-
-        match copy_dir_recursively("./upper", "./upper_copy") {
-            Ok(_) => {
-                fs::remove_dir_all("./upper").unwrap();
-                fs::remove_dir_all("./upper_copy").unwrap();
-            }
-            Err(_) => {
-                fs::remove_dir_all("./upper").unwrap();
-                fs::remove_dir_all("./upper_copy").unwrap();
-            }
-        };
-    }
 }
