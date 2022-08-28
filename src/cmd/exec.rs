@@ -1,7 +1,9 @@
-use crate::{command, container, image_downloader, namespace, setting, utils};
+use crate::{cmd::common, command, container, image_downloader, namespace, setting, user, utils};
 
+use nix::sched::{unshare, CloneFlags};
 use nix::sys::wait::waitpid;
-use nix::unistd::{fork, ForkResult};
+use nix::unistd::{chdir, chroot, fork, ForkResult, Gid, Uid};
+use std::path::PathBuf;
 use std::{error, fmt};
 
 #[derive(Debug)]
@@ -43,20 +45,27 @@ impl ExecStruct {
                     Err(_) => Err(Error::Waitpid)?,
                 },
                 Ok(ForkResult::Child) => {
+                    let gid = Gid::current();
+                    let uid = Uid::current();
+
                     // setnsで名前空間を変更
                     ns.setns_net()?;
                     ns.setns_cgroup()?;
                     ns.setns_ipc()?;
                     ns.setns_pid()?;
-
-                    // これがあるとなぜか失敗する
-                    // setns(user_fd.as_raw_fd(), CloneFlags::empty())?;
-
-                    ns.setns_mnt()?;
                     ns.setns_uts()?;
+                    unshare(CloneFlags::CLONE_NEWUSER)?;
+
+                    common::new_uidmap(&uid)?;
+                    common::new_gidmap(&gid)?;
+
+                    let user = user::User::new()?;
+                    let dcontainer_base = format!("{}/{}", user.containers(), exec.name());
+                    let dcontainer_base_merged = format!("{}/merged", &dcontainer_base);
+                    chroot(&PathBuf::from(&dcontainer_base_merged))?;
+                    chdir("/")?;
 
                     // execでプログラムを実行
-
                     use std::os::unix::process::CommandExt;
                     std::process::Command::new(exec.cmd().main())
                         .args(exec.cmd().detail())
